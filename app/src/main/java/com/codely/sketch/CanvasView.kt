@@ -19,18 +19,21 @@ class CanvasView : View {
     private var mX: Float = 0f
     private var mY: Float = 0f
     private var mTolerance: Int = 5
+    // Used for path expiry
+    // private var mMaxPathLen: Int = 5
+    // private var codeBlocks: ArrayList = ArrayList
 
     // Constructors
     constructor(context: Context) : this(context, null)
     constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {
         var width: Int = Resources.getSystem().displayMetrics.widthPixels
-        var height: Int = Resources.getSystem().displayMetrics.heightPixels
+        var height: Int = Resources.getSystem().displayMetrics.heightPixels - 200
 
         mPaint.color = Color.BLACK
         mPaint.strokeJoin = Paint.Join.ROUND
         mPaint.style = Paint.Style.STROKE
-        mPaint.strokeWidth = 4f
+        mPaint.strokeWidth = 10f
 
         mBitMap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
     }
