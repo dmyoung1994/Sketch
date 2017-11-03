@@ -19,9 +19,6 @@ class CanvasView : View {
     private var mX: Float = 0f
     private var mY: Float = 0f
     private var mTolerance: Int = 5
-    // Used for path expiry
-    // private var mMaxPathLen: Int = 5
-    // private var codeBlocks: ArrayList = ArrayList
 
     // Constructors
     constructor(context: Context) : this(context, null)

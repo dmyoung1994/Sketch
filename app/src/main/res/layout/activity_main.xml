@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:paddingLeft="16dp"
@@ -8,23 +9,40 @@
 
     <com.codely.sketch.CanvasView
         android:layout_width="match_parent"
-        android:layout_height="414dp" />
+        android:layout_height="405dp" />
 
-    <HorizontalScrollView
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
         <Button
-            android:id="@+id/VarDecBlock"
+            android:id="@+id/varDec"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:text="VarDec" />
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentTop="true"
+            android:text="@string/VarDecBlock" />
 
         <Button
-            android:id="@+id/button2"
+            android:id="@+id/ifElse"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:text="Button" />
-    </HorizontalScrollView>
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentTop="true"
+            android:layout_marginStart="20dp"
+            android:layout_toEndOf="@+id/varDec"
+            android:text="@string/IfElse" />
+
+        <Button
+            android:id="@+id/button9"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignBaseline="@+id/ifElse"
+            android:layout_alignBottom="@+id/ifElse"
+            android:layout_alignParentEnd="true"
+            android:layout_marginEnd="24dp"
+            android:text="@string/Print" />
+    </RelativeLayout>
 
 </LinearLayout>
