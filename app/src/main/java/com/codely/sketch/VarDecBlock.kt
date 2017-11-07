@@ -3,17 +3,13 @@ package com.codely.sketch
 /**
  * Created by Daniel on 10/16/2017.
  */
-class VarDecBlock: CodeBlock {
-    var varName: String = ""
+class VarDecBlock(name: String, x: Float, y: Float) : CodeBlock {
+    var varName: String = name
 
-    override val type: BlockType
-        get() = BlockType.VAR_DEC
-
+    override val type: BlockType = BlockType.VAR_DEC
     override var nextBlock: CodeBlock? = null
-
-    constructor(name: String) {
-        varName = name
-    }
+    override var xCord: Float = x
+    override var yCord: Float = y
 
     override fun convertToPython() {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.

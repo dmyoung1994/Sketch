@@ -1,11 +1,17 @@
 package com.codely.sketch
 
+import android.app.AlertDialog
 import android.content.Context
+import android.content.DialogInterface
 import android.content.res.Resources
 import android.graphics.*
+import android.text.InputType
 import android.util.AttributeSet
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
+import android.widget.Button
+import android.widget.EditText
 
 /**
  * Created by Daniel on 10/11/2017.
@@ -19,13 +25,15 @@ class CanvasView : View {
     private var mX: Float = 0f
     private var mY: Float = 0f
     private var mTolerance: Int = 5
+    private var codeBlocks: HashSet<CodeBlock> = HashSet()
+    private var varNames: HashSet<String> = HashSet()
 
     // Constructors
     constructor(context: Context) : this(context, null)
     constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {
-        var width: Int = Resources.getSystem().displayMetrics.widthPixels
-        var height: Int = Resources.getSystem().displayMetrics.heightPixels - 200
+        val width: Int = Resources.getSystem().displayMetrics.widthPixels
+        val height: Int = Resources.getSystem().displayMetrics.heightPixels - 200
 
         mPaint.color = Color.BLACK
         mPaint.strokeJoin = Paint.Join.ROUND
@@ -33,6 +41,25 @@ class CanvasView : View {
         mPaint.strokeWidth = 10f
 
         mBitMap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    }
+
+    fun handleVarDecButtonClick() {
+        val nameDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
+        val input = EditText(this.context)
+        input.inputType = InputType.TYPE_CLASS_TEXT
+        nameDialog.setView(input)
+            .setTitle("Enter A Variable Name")
+            .setPositiveButton("OK", { _, _ ->
+                val varName = input.text.toString()
+                val varDecBlock = VarDecBlock(varName, width/2.toFloat(), height/2.toFloat())
+                varNames.add(varName)
+                codeBlocks.add(varDecBlock)
+                drawBlock(varDecBlock)
+            })
+            .setNegativeButton("Cancel", { d, _ ->
+                d.cancel()
+            })
+            .show()
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -56,8 +83,13 @@ class CanvasView : View {
         return true
     }
 
+    private fun drawBlock(block: CodeBlock) {
+    }
+
     // called when a touch down even it set
     private fun startTouch(x: Float, y: Float) {
+        // Check to see if we're moving a block first
+
         mPath.moveTo(x, y)
         mX = x
         mY = y

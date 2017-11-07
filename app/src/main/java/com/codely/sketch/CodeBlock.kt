@@ -8,8 +8,12 @@ enum class BlockType {
 }
 
 interface CodeBlock {
+    var xCord: Float
+    var yCord: Float
     val type: BlockType
     var nextBlock: CodeBlock?
+
+
     fun run()
     fun convertToPython()
     fun convertToC()
