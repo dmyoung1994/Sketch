@@ -23,8 +23,8 @@ class CanvasView : View {
     private var mPaint: Paint = Paint()
     private var mBlockPaint: Paint = Paint()
     private var mTextPaint: Paint = Paint()
-    private var mX: Float = 0f
-    private var mY: Float = 0f
+    private var mX: Int = 0
+    private var mY: Int = 0
     private var mTolerance: Int = 5
     private var codeBlocks: HashSet<CodeBlock> = HashSet()
     private var varNames: HashSet<String> = HashSet()
@@ -61,7 +61,7 @@ class CanvasView : View {
             .setTitle("Enter A Variable Name")
             .setPositiveButton("OK", { _, _ ->
                 val varName = input.text.toString()
-                val varDecBlock = VarDecBlock(varName, width/2.toFloat(), height/2.toFloat())
+                val varDecBlock = VarDecBlock(varName, width/2, height/2)
                 varNames.add(varName)
                 codeBlocks.add(varDecBlock)
             })
@@ -78,8 +78,8 @@ class CanvasView : View {
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        val x: Float = event.x
-        val y: Float = event.y
+        val x: Int = event.x.toInt()
+        val y: Int = event.y.toInt()
 
         when( event.action ) {
             MotionEvent.ACTION_DOWN -> startTouch(x, y)
@@ -92,27 +92,13 @@ class CanvasView : View {
         return true
     }
 
-    private fun getTouchedBlock(x: Float, y: Float): CodeBlock? {
-        for (block: CodeBlock in codeBlocks) {
-            val xDiff = x - block.xCord
-            val yDiff = y - block.yCord
-            if ((xDiff <= block.width && xDiff >= 0) && (yDiff <= block.height && yDiff >= 0)) {
-                Log.d("DEBUG", "Registered touch in block: %s".format(block.type))
-                return block
-            }
-        }
-
-        // If we didn't find anything return null
-        return null
-    }
-
     // called when a touch down even it set
-    private fun startTouch(x: Float, y: Float) {
+    private fun startTouch(x: Int, y: Int) {
         val touchedBlock: CodeBlock? = getTouchedBlock(x, y)
 
         // if we didn't touch a block, just move the path
         when(touchedBlock) {
-            null -> mPath.moveTo(x, y)
+            null -> mPath.moveTo(x.toFloat(), y.toFloat())
             else -> {selectedBlock = touchedBlock}
         }
 
@@ -121,26 +107,28 @@ class CanvasView : View {
     }
 
     // smooths out the path
-    private fun moveTouch(x: Float, y: Float) {
-        val distX: Float = Math.abs( x - mX )
-        val distY: Float = Math.abs( y - mY )
+    private fun moveTouch(x: Int, y: Int) {
+        val distX: Int = Math.abs( x - mX )
+        val distY: Int = Math.abs( y - mY )
         // If intent is to actually move
         if ( distX >= mTolerance || distY >= mTolerance) {
             // we're dragging a block
             when( selectedBlock ) {
-                null            -> mPath.quadTo( mX, mY, (x + mX) / 2, (y + mY) / 2)
+                null            -> mPath.quadTo( mX.toFloat(), mY.toFloat(), (x + mX).toFloat() / 2, (y + mY).toFloat() / 2)
                 is CodeBlock    -> {
                     val dx = x - mX
                     val dy = y - mY
-                    val blockX = selectedBlock!!.xCord
-                    val blockY = selectedBlock!!.yCord
-                    val blockWidt = selectedBlock!!.width
-                    val blockHeight = selectedBlock!!.height
+                    val blockX = selectedBlock!!.rect.left
+                    val blockY = selectedBlock!!.rect.top
+                    val blockWidth = selectedBlock!!.rect.width()
+                    val blockHeight = selectedBlock!!.rect.height()
                     // Only move the rect if we're not going off the screen
-                    if ( (blockX + dx >= 0 && blockX + blockWidt + dx <= width)
+                    if ( (blockX + dx >= 0 && blockX + blockWidth + dx <= width)
                             && (blockY + dy >= 0 && blockY + blockHeight + dy <= height)) {
-                        selectedBlock!!.xCord = blockX + dx
-                        selectedBlock!!.yCord = blockY + dy
+                        selectedBlock!!.rect.left = blockX + dx
+                        selectedBlock!!.rect.top = blockY + dy
+                        selectedBlock!!.rect.right = selectedBlock!!.rect.left + BlockSize.BLOCK_WIDTH.number
+                        selectedBlock!!.rect.bottom = selectedBlock!!.rect.top + BlockSize.BLOCK_HEIGHT.number
                     }
                 }
             }
@@ -153,21 +141,35 @@ class CanvasView : View {
     // draws the path
     private fun endTouch() {
         when (selectedBlock) {
-            null            -> mPath.lineTo( mX, mY )
+            null            -> mPath.lineTo( mX.toFloat(), mY.toFloat() )
             is CodeBlock    -> {
                 selectedBlock = null
             }
         }
     }
 
+    private fun getTouchedBlock(x: Int, y: Int): CodeBlock? {
+        for (block: CodeBlock in codeBlocks) {
+            if (block.rect.contains(x, y)) {
+                Log.d("DEBUG", "Registered touch in block: %s".format(block.type))
+                return block
+            }
+        }
+
+        // If we didn't find anything return null
+        return null
+    }
+
+
+
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
         canvas?.drawPath(mPath, mPaint)
         for (block: CodeBlock in codeBlocks) {
             // Draw the block
-            canvas?.drawRect(block.xCord, block.yCord, block.xCord + block.width, block.yCord + block.height, mBlockPaint)
+            canvas?.drawRect(block.rect, mBlockPaint)
             // Draw its text
-            canvas?.drawText(block.getBlockText(), block.xCord, block.yCord, mTextPaint)
+            canvas?.drawText(block.getBlockText(), block.rect.left.toFloat(), block.rect.top.toFloat(), mTextPaint)
         }
     }
 
