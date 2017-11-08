@@ -10,6 +10,8 @@ enum class BlockType {
 interface CodeBlock {
     var xCord: Float
     var yCord: Float
+    var height: Int
+    var width: Int
     val type: BlockType
     var nextBlock: CodeBlock?
 
@@ -18,4 +20,5 @@ interface CodeBlock {
     fun convertToPython()
     fun convertToC()
     fun convertToJava()
+    fun getBlockText(): String
 }

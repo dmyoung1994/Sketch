@@ -10,7 +10,6 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
-import android.widget.Button
 import android.widget.EditText
 
 /**
@@ -22,11 +21,14 @@ class CanvasView : View {
     private var mCanvas: Canvas = Canvas()
     private var mPath: Path = Path()
     private var mPaint: Paint = Paint()
+    private var mBlockPaint: Paint = Paint()
+    private var mTextPaint: Paint = Paint()
     private var mX: Float = 0f
     private var mY: Float = 0f
     private var mTolerance: Int = 5
     private var codeBlocks: HashSet<CodeBlock> = HashSet()
     private var varNames: HashSet<String> = HashSet()
+    private var selectedBlock: CodeBlock? = null
 
     // Constructors
     constructor(context: Context) : this(context, null)
@@ -39,6 +41,14 @@ class CanvasView : View {
         mPaint.strokeJoin = Paint.Join.ROUND
         mPaint.style = Paint.Style.STROKE
         mPaint.strokeWidth = 10f
+
+        mBlockPaint.color = Color.RED
+        mBlockPaint.strokeWidth = 40f
+        mBlockPaint.style = Paint.Style.FILL
+
+        mTextPaint.color = Color.BLACK
+        mTextPaint.style = Paint.Style.FILL
+        mTextPaint.textSize = 40f
 
         mBitMap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
     }
@@ -54,7 +64,6 @@ class CanvasView : View {
                 val varDecBlock = VarDecBlock(varName, width/2.toFloat(), height/2.toFloat())
                 varNames.add(varName)
                 codeBlocks.add(varDecBlock)
-                drawBlock(varDecBlock)
             })
             .setNegativeButton("Cancel", { d, _ ->
                 d.cancel()
@@ -83,24 +92,59 @@ class CanvasView : View {
         return true
     }
 
-    private fun drawBlock(block: CodeBlock) {
+    private fun getTouchedBlock(x: Float, y: Float): CodeBlock? {
+        for (block: CodeBlock in codeBlocks) {
+            val xDiff = x - block.xCord
+            val yDiff = y - block.yCord
+            if ((xDiff <= block.width && xDiff >= 0) && (yDiff <= block.height && yDiff >= 0)) {
+                Log.d("DEBUG", "Registered touch in block: %s".format(block.type))
+                return block
+            }
+        }
+
+        // If we didn't find anything return null
+        return null
     }
 
     // called when a touch down even it set
     private fun startTouch(x: Float, y: Float) {
-        // Check to see if we're moving a block first
+        val touchedBlock: CodeBlock? = getTouchedBlock(x, y)
 
-        mPath.moveTo(x, y)
+        // if we didn't touch a block, just move the path
+        when(touchedBlock) {
+            null -> mPath.moveTo(x, y)
+            else -> {selectedBlock = touchedBlock}
+        }
+
         mX = x
         mY = y
     }
 
     // smooths out the path
     private fun moveTouch(x: Float, y: Float) {
-        val dx: Float = Math.abs( x - mX )
-        val dy: Float = Math.abs( y - mY )
-        if ( dx >= mTolerance || dy >= mTolerance) {
-            mPath.quadTo( mX, mY, (x + mX) / 2, (y + mY) / 2)
+        val distX: Float = Math.abs( x - mX )
+        val distY: Float = Math.abs( y - mY )
+        // If intent is to actually move
+        if ( distX >= mTolerance || distY >= mTolerance) {
+            // we're dragging a block
+            when( selectedBlock ) {
+                null            -> mPath.quadTo( mX, mY, (x + mX) / 2, (y + mY) / 2)
+                is CodeBlock    -> {
+                    val dx = x - mX
+                    val dy = y - mY
+                    val blockX = selectedBlock!!.xCord
+                    val blockY = selectedBlock!!.yCord
+                    val blockWidt = selectedBlock!!.width
+                    val blockHeight = selectedBlock!!.height
+                    // Only move the rect if we're not going off the screen
+                    if ( (blockX + dx >= 0 && blockX + blockWidt + dx <= width)
+                            && (blockY + dy >= 0 && blockY + blockHeight + dy <= height)) {
+                        selectedBlock!!.xCord = blockX + dx
+                        selectedBlock!!.yCord = blockY + dy
+                    }
+                }
+            }
+
             mX = x
             mY = y
         }
@@ -108,12 +152,23 @@ class CanvasView : View {
 
     // draws the path
     private fun endTouch() {
-        mPath.lineTo( mX, mY )
+        when (selectedBlock) {
+            null            -> mPath.lineTo( mX, mY )
+            is CodeBlock    -> {
+                selectedBlock = null
+            }
+        }
     }
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
         canvas?.drawPath(mPath, mPaint)
+        for (block: CodeBlock in codeBlocks) {
+            // Draw the block
+            canvas?.drawRect(block.xCord, block.yCord, block.xCord + block.width, block.yCord + block.height, mBlockPaint)
+            // Draw its text
+            canvas?.drawText(block.getBlockText(), block.xCord, block.yCord, mTextPaint)
+        }
     }
 
 }
