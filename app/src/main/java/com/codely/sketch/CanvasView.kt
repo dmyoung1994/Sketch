@@ -10,12 +10,14 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
-import android.widget.EditText
+import android.widget.*
 
 /**
  * Created by Daniel on 10/11/2017.
  */
 
+// TODO: Take out the codeBlocks and put them into a model.
+// TODO: Make this class the ViewController
 class CanvasView : View {
     private var mBitMap: Bitmap? = null
     private var mCanvas: Canvas = Canvas()
@@ -27,7 +29,7 @@ class CanvasView : View {
     private var mY: Int = 0
     private var mTolerance: Int = 5
     private var codeBlocks: HashSet<CodeBlock> = HashSet()
-    private var varNames: HashSet<String> = HashSet()
+    private var varNames: HashMap<String, VarDecBlock> = HashMap()
     private var selectedBlock: CodeBlock? = null
 
     // Constructors
@@ -54,21 +56,69 @@ class CanvasView : View {
     }
 
     fun handleVarDecButtonClick() {
-        val nameDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
+        val varDecDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
         val input = EditText(this.context)
         input.inputType = InputType.TYPE_CLASS_TEXT
-        nameDialog.setView(input)
-            .setTitle("Enter A Variable Name")
+        input.hint = "Enter a variable name"
+        varDecDialog.setView(input)
+            .setTitle("Declare a variable")
             .setPositiveButton("OK", { _, _ ->
                 val varName = input.text.toString()
                 val varDecBlock = VarDecBlock(varName, width/2, height/2)
-                varNames.add(varName)
+                // TODO: Add error checking
+                varNames.put(varName, varDecBlock)
                 codeBlocks.add(varDecBlock)
             })
             .setNegativeButton("Cancel", { d, _ ->
                 d.cancel()
             })
             .show()
+        input.requestFocus()
+    }
+
+    fun handleIfElseButtonClick() {
+        val ifElseDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
+        var layoutGroup = LinearLayout(this.context)
+        layoutGroup.orientation = LinearLayout.VERTICAL
+
+        // Build data set for our dropdown
+        val varSpinner = Spinner(this.context)
+        val spinnerArray: List<String> = ArrayList(varNames.keys)
+        val varAdapter: ArrayAdapter<String> = ArrayAdapter(this.context, android.R.layout.simple_spinner_item, spinnerArray)
+        varAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        varSpinner.adapter = varAdapter
+        varSpinner.prompt = "What variable should we compare?"
+
+        // Data Field for conditionals
+        val compareSpinner = Spinner(this.context)
+        val compareAdapter: ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this.context, R.array.comparators, android.R.layout.simple_spinner_item)
+        compareAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        compareSpinner.adapter = compareAdapter
+        compareSpinner.prompt = "How should we compare it?"
+
+        // Data field for condition target
+        val input = EditText(this.context)
+        input.inputType = InputType.TYPE_CLASS_NUMBER
+        input.hint = "What value should we compare it to?"
+
+        layoutGroup.addView(varSpinner)
+        layoutGroup.addView(compareSpinner)
+        layoutGroup.addView(input)
+
+
+        ifElseDialog.setView(layoutGroup)
+                .setTitle("Set up a condition")
+                .setPositiveButton("OK", { _, _ ->
+                    val conditionBlock = varNames[varSpinner.selectedItem.toString()]
+                    val comparator = compareSpinner.selectedItem.toString()
+                    val target = input.text.toString()
+                    val ifElseBlock = IfElseBlock(conditionBlock!!, comparator, target, width/2, height/2)
+                    codeBlocks.add(ifElseBlock)
+                })
+                .setNegativeButton("Cancel", { d, _ ->
+                    d.cancel()
+                })
+                .show()
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -114,7 +164,10 @@ class CanvasView : View {
         if ( distX >= mTolerance || distY >= mTolerance) {
             // we're dragging a block
             when( selectedBlock ) {
-                null            -> mPath.quadTo( mX.toFloat(), mY.toFloat(), (x + mX).toFloat() / 2, (y + mY).toFloat() / 2)
+                null -> {
+                    mPath.quadTo( mX.toFloat(), mY.toFloat(), (x + mX).toFloat() / 2, (y + mY).toFloat() / 2)
+                    // TODO: Find closest block to finger
+                }
                 is CodeBlock    -> {
                     val dx = x - mX
                     val dy = y - mY
@@ -159,8 +212,6 @@ class CanvasView : View {
         // If we didn't find anything return null
         return null
     }
-
-
 
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)

@@ -3,4 +3,12 @@
     <string name="VarDecBlock">Var Dec</string>
     <string name="IfElse">If / Else</string>
     <string name="Print">Print</string>
+    <string-array name="comparators">
+        <item>is equal to</item>
+        <item>is not equal to</item>
+        <item>is less than</item>
+        <item>is greater than</item>
+        <item>is greater than or equal to</item>
+        <item>is less than or equal to</item>
+    </string-array>
 </resources>

@@ -19,4 +19,8 @@ class MainActivity : AppCompatActivity() {
     fun handleVarDecButtonClick(v: View) {
         cv?.handleVarDecButtonClick()
     }
+
+    fun handleIfElseButtonClick(v: View) {
+        cv?.handleIfElseButtonClick()
+    }
 }
