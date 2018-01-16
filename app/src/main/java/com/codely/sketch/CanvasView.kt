@@ -2,7 +2,6 @@ package com.codely.sketch
 
 import android.app.AlertDialog
 import android.content.Context
-import android.content.DialogInterface
 import android.content.res.Resources
 import android.graphics.*
 import android.text.InputType
@@ -11,6 +10,7 @@ import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.widget.*
+import kotlin.math.abs
 
 /**
  * Created by Daniel on 10/11/2017.
@@ -28,9 +28,11 @@ class CanvasView : View {
     private var mX: Int = 0
     private var mY: Int = 0
     private var mTolerance: Int = 5
+    private var mBlockSelectionTolerance: Int = 50
     private var codeBlocks: HashSet<CodeBlock> = HashSet()
     private var varNames: HashMap<String, VarDecBlock> = HashMap()
     private var selectedBlock: CodeBlock? = null
+    private var executionBlock: CodeBlock? = null
 
     // Constructors
     constructor(context: Context) : this(context, null)
@@ -68,6 +70,7 @@ class CanvasView : View {
                 // TODO: Add error checking
                 varNames.put(varName, varDecBlock)
                 codeBlocks.add(varDecBlock)
+                if (executionBlock == null ) executionBlock = varDecBlock
             })
             .setNegativeButton("Cancel", { d, _ ->
                 d.cancel()
@@ -76,9 +79,34 @@ class CanvasView : View {
         input.requestFocus()
     }
 
+    fun handlePrintButtonClicked() {
+        val printDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
+
+        // Build data set for our dropdown
+        val varSpinner = Spinner(this.context)
+        val spinnerArray: List<String> = ArrayList(varNames.keys)
+        val varAdapter: ArrayAdapter<String> = ArrayAdapter(this.context, android.R.layout.simple_spinner_item, spinnerArray)
+        varAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        varSpinner.adapter = varAdapter
+        varSpinner.prompt = "What do you want to print?"
+
+        printDialog.setView(varSpinner)
+            .setTitle("Print a variable")
+            .setPositiveButton("OK", { _, _ ->
+                val varBlock = varNames[varSpinner.selectedItem.toString()]
+                val printBlock = PrintBlock(varBlock!!, width/2, height/2)
+                codeBlocks.add(printBlock)
+                if (executionBlock == null ) executionBlock = printBlock
+            })
+            .setNegativeButton("Cancel", { d, _ ->
+                d.cancel()
+            })
+            .show()
+    }
+
     fun handleIfElseButtonClick() {
         val ifElseDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
-        var layoutGroup = LinearLayout(this.context)
+        val layoutGroup = LinearLayout(this.context)
         layoutGroup.orientation = LinearLayout.VERTICAL
 
         // Build data set for our dropdown
@@ -114,6 +142,7 @@ class CanvasView : View {
                     val target = input.text.toString()
                     val ifElseBlock = IfElseBlock(conditionBlock!!, comparator, target, width/2, height/2)
                     codeBlocks.add(ifElseBlock)
+                    if (executionBlock == null ) executionBlock = ifElseBlock
                 })
                 .setNegativeButton("Cancel", { d, _ ->
                     d.cancel()
@@ -158,8 +187,8 @@ class CanvasView : View {
 
     // smooths out the path
     private fun moveTouch(x: Int, y: Int) {
-        val distX: Int = Math.abs( x - mX )
-        val distY: Int = Math.abs( y - mY )
+        val distX: Int = abs( x - mX )
+        val distY: Int = abs( y - mY )
         // If intent is to actually move
         if ( distX >= mTolerance || distY >= mTolerance) {
             // we're dragging a block
@@ -167,7 +196,36 @@ class CanvasView : View {
                 null -> {
                     mPath.quadTo( mX.toFloat(), mY.toFloat(), (x + mX).toFloat() / 2, (y + mY).toFloat() / 2)
                     // TODO: Find closest block to finger
+                    var closestBlock: CodeBlock? = executionBlock
+                    for (block: CodeBlock in codeBlocks) {
+                        val bX = block.rect.centerX()
+                        val bY = block.rect.centerY()
+
+                        if ( closestBlock != null ) {
+                            // only care if we're close enough to be considered a selection
+                            if (abs(x - bX) >= mBlockSelectionTolerance
+                                    && abs( y - bY) >= mBlockSelectionTolerance) {
+                                continue
+                            }
+
+                            if ( abs(x - bX) < abs(closestBlock.rect.centerX() - bX)
+                                    && abs(y - bY) < abs(closestBlock.rect.centerX() - bY)) {
+                                closestBlock = block
+                            }
+                        }
+                    }
+
+                    if (closestBlock != executionBlock ) {
+                        if (executionBlock != null) {
+                            executionBlock!!.nextBlock = closestBlock
+                        }
+
+                        executionBlock = closestBlock
+
+                        print("Changing closest block")
+                    }
                 }
+
                 is CodeBlock    -> {
                     val dx = x - mX
                     val dy = y - mY

@@ -1,6 +1,5 @@
 package com.codely.sketch
 
-import android.content.res.Resources
 import android.graphics.Rect
 
 /**
