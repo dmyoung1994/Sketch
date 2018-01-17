@@ -68,20 +68,20 @@ class CanvasView : View {
                 val varName = input.text.toString()
                 val varDecBlock = VarDecBlock(varName, width/2, height/2)
                 // TODO: Add error checking
-                varNames.put(varName, varDecBlock)
+                varNames[varName] = varDecBlock
                 codeBlocks.add(varDecBlock)
                 if (executionBlock == null ) executionBlock = varDecBlock
+                input.requestFocus()
+                invalidate()
             })
             .setNegativeButton("Cancel", { d, _ ->
                 d.cancel()
             })
             .show()
-        input.requestFocus()
     }
 
     fun handlePrintButtonClicked() {
         val printDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
-
         // Build data set for our dropdown
         val varSpinner = Spinner(this.context)
         val spinnerArray: List<String> = ArrayList(varNames.keys)
@@ -97,6 +97,7 @@ class CanvasView : View {
                 val printBlock = PrintBlock(varBlock!!, width/2, height/2)
                 codeBlocks.add(printBlock)
                 if (executionBlock == null ) executionBlock = printBlock
+                invalidate()
             })
             .setNegativeButton("Cancel", { d, _ ->
                 d.cancel()
@@ -143,6 +144,7 @@ class CanvasView : View {
                     val ifElseBlock = IfElseBlock(conditionBlock!!, comparator, target, width/2, height/2)
                     codeBlocks.add(ifElseBlock)
                     if (executionBlock == null ) executionBlock = ifElseBlock
+                    invalidate()
                 })
                 .setNegativeButton("Cancel", { d, _ ->
                     d.cancel()

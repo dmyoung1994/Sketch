@@ -2,12 +2,12 @@ package com.codely.sketch
 
 import android.graphics.Rect
 
-class PrintBlock(printBlock: VarDecBlock, x: Int, y: Int) : CodeBlock {
+class PrintBlock(printVar: VarDecBlock, x: Int, y: Int) : CodeBlock {
     override val type: BlockType = BlockType.PRINT
     override var nextBlock: CodeBlock? = null
     override var rect: Rect = Rect(x, y, x + BlockSize.BLOCK_WIDTH.number, y + BlockSize.BLOCK_HEIGHT.number)
 
-    private var printBlock = printBlock
+    private var printVar = printVar
 
     override fun convertToPython() {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
@@ -26,6 +26,6 @@ class PrintBlock(printBlock: VarDecBlock, x: Int, y: Int) : CodeBlock {
     }
 
     override fun getBlockText(): String {
-        return "Print %s".format(printBlock.varName)
+        return "Print %s".format(printVar.varName)
     }
 }
