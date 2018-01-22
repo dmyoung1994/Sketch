@@ -3,6 +3,7 @@
     <string name="VarDecBlock">Var Dec</string>
     <string name="IfElse">If / Else</string>
     <string name="Print">Print</string>
+    <string name="Delete">Delete</string>
     <string-array name="comparators">
         <item>is equal to</item>
         <item>is not equal to</item>

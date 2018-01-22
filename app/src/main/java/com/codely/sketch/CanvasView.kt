@@ -180,14 +180,53 @@ class CanvasView : View {
         // if we didn't touch a block, just move the path
         when(touchedBlock) {
             null -> mPath.moveTo(x.toFloat(), y.toFloat())
-            else -> {selectedBlock = touchedBlock}
+            else -> {
+                selectedBlock = touchedBlock
+                toggleTrashCan()
+            }
         }
 
         mX = x
         mY = y
     }
 
-    // smooths out the path
+    // draws the path
+    private fun endTouch() {
+        when (selectedBlock) {
+            null            -> mPath.lineTo( mX.toFloat(), mY.toFloat() )
+            is CodeBlock    -> {
+                toggleTrashCan()
+                if (isDeletingBlock(selectedBlock!!)) {
+                    codeBlocks.remove(selectedBlock!!)
+                }
+                selectedBlock = null
+            }
+        }
+    }
+
+    private fun isDeletingBlock(codeBlock: CodeBlock): Boolean {
+        val trashcan: View = rootView.findViewById(R.id.trashCan)
+        val blockRect: Rect = codeBlock.rect
+        val trashRect = Rect(trashcan.left, trashcan.top, trashcan.right, trashcan.bottom)
+        return Rect.intersects(blockRect, trashRect)
+    }
+
+    private fun toggleTrashCan() {
+        val trashCan: View = rootView.findViewById(R.id.trashCan)
+        val visibility: Int = trashCan.visibility
+        when ( visibility ) {
+            View.VISIBLE -> {
+                // TODO: fade down
+                trashCan.visibility = View.INVISIBLE
+            }
+
+            View.INVISIBLE -> {
+                // TODO: fade up
+                trashCan.visibility = View.VISIBLE
+            }
+        }
+    }
+
     private fun moveTouch(x: Int, y: Int) {
         val distX: Int = abs( x - mX )
         val distY: Int = abs( y - mY )
@@ -248,16 +287,6 @@ class CanvasView : View {
 
             mX = x
             mY = y
-        }
-    }
-
-    // draws the path
-    private fun endTouch() {
-        when (selectedBlock) {
-            null            -> mPath.lineTo( mX.toFloat(), mY.toFloat() )
-            is CodeBlock    -> {
-                selectedBlock = null
-            }
         }
     }
 
