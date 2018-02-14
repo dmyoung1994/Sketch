@@ -4,6 +4,8 @@
     <string name="IfElse">If / Else</string>
     <string name="Print">Print</string>
     <string name="Delete">Delete</string>
+    <string name="dragtodelete">dragToDelete</string>
+    <string name="run_code">Run Code</string>
     <string-array name="comparators">
         <item>is equal to</item>
         <item>is not equal to</item>
