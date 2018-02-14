@@ -4,9 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="horizontal"
-    android:paddingLeft="16dp"
-    android:paddingRight="16dp">
+    android:orientation="horizontal">
 
     <FrameLayout
         android:layout_width="wrap_content"
@@ -23,11 +21,23 @@
 
         <ImageView
             android:id="@+id/trashCan"
+            android:contentDescription="@string/dragtodelete"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
+            android:layout_gravity="end"
+            android:layout_margin="16dp"
             android:visibility="invisible"
-            android:src="@drawable/ic_delete_black_24dp"/>
+            android:src="@drawable/ic_delete_black_24dp" />
+
+        <Button
+            android:id="@+id/runButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/run_code"
+            android:layout_margin="16dp"
+            android:layout_gravity="center_horizontal"
+            android:onClick="handleRunButtonClick"/>
+
 
     </FrameLayout>
 

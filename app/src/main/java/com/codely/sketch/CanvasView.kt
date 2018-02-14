@@ -4,9 +4,9 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.*
+import android.os.Looper
 import android.text.InputType
 import android.util.AttributeSet
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.widget.*
@@ -16,6 +16,7 @@ import java.util.*
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 import kotlin.concurrent.timerTask
+import kotlin.concurrent.thread
 import kotlin.math.abs
 
 /**
@@ -29,15 +30,14 @@ class CanvasView : View {
     private var mCanvas: Canvas = Canvas()
     private var mPath: Path = Path()
     private var mPaint: Paint = Paint()
+    // TODO: Move block paint into the blocks themselves
     private var mBlockPaint: Paint = Paint()
     private var mTextPaint: Paint = Paint()
-    private var mConnectPaint: Paint = Paint()
+    private var mArrowPaint: Paint = Paint()
     private var mX: Int = 0
     private var mY: Int = 0
     private var mTolerance: Int = 5
     private var mBlockSelectionTolerance: Int = 50
-    private var codeBlocks: HashSet<CodeBlock> = HashSet()
-    private var varNames: HashMap<String, VarDecBlock> = HashMap()
     private var selectedBlock: CodeBlock? = null
     private var executionBlock: CodeBlock? = null
     private var mFadeTimer: Timer = Timer()
@@ -45,18 +45,19 @@ class CanvasView : View {
 
     var drawnLines: BlockingQueue<LinePath> = LinkedBlockingQueue()
 
+    private val stateMachine: CodeStateMachine = CodeStateMachine.getInstance()
+
     // Constructors
     constructor(context: Context) : this(context, null)
     constructor(context: Context, attrs: AttributeSet?) : this(context, attrs, 0)
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {
         val width: Int = Resources.getSystem().displayMetrics.widthPixels
-        val height: Int = Resources.getSystem().displayMetrics.heightPixels - 200
-
+        val height: Int = Resources.getSystem().displayMetrics.heightPixels
 
         mPaint.color = Color.BLACK
         mPaint.strokeJoin = Paint.Join.ROUND
         mPaint.style = Paint.Style.STROKE
-        mPaint.strokeWidth = 10f
+        mPaint.strokeWidth = 1f
 
         mBlockPaint.color = Color.RED
         mBlockPaint.strokeWidth = 40f
@@ -66,10 +67,9 @@ class CanvasView : View {
         mTextPaint.style = Paint.Style.FILL
         mTextPaint.textSize = 40f
 
-        mConnectPaint.color = Color.BLUE
-        mConnectPaint.strokeJoin = Paint.Join.ROUND
-        mConnectPaint.style = Paint.Style.STROKE
-        mConnectPaint.strokeWidth = 25f
+        mArrowPaint.color = Color.BLACK
+        mArrowPaint.style = Paint.Style.STROKE
+        mArrowPaint.strokeWidth = 20f
 
         mBitMap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         scheduleFadeTimer()
@@ -92,52 +92,72 @@ class CanvasView : View {
         return paint
     }
 
+
+    /**
+     * Interface Handlers
+     */
+
+    fun handleRunButtonClick() {
+        thread(true) {
+            Looper.prepare()
+            stateMachine.codeBlocks.elementAt(0).run()
+            val resultDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
+            resultDialog.setMessage(stateMachine.terminatorBlock?.value.toString())
+                    .setTitle("Code Result")
+                    .show()
+//            Toast.makeText(context, stateMachine.terminatorBlock?.value.toString(), Toast.LENGTH_LONG).show()
+            Looper.loop()
+        }
+    }
+
     fun handleVarDecButtonClick() {
         val varDecDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
         val input = EditText(this.context)
         input.inputType = InputType.TYPE_CLASS_TEXT
         input.hint = "Enter a variable name"
         varDecDialog.setView(input)
-            .setTitle("Declare a variable")
-            .setPositiveButton("OK", { _, _ ->
-                val varName = input.text.toString()
-                val varDecBlock = VarDecBlock(varName, width / 2, height / 2)
-                // TODO: Add error checking
-                varNames[varName] = varDecBlock
-                codeBlocks.add(varDecBlock)
-                if (executionBlock == null ) executionBlock = varDecBlock
-                input.requestFocus()
-                invalidate()
-            })
-            .setNegativeButton("Cancel", { d, _ ->
-                d.cancel()
-            })
-            .show()
+                .setTitle("Declare a variable")
+                .setPositiveButton("OK", { _, _ ->
+                    val varName = input.text.toString()
+                    val varDecBlock = VarDecBlock(varName, width / 2, height / 2)
+                    // TODO: Add error checking
+                    stateMachine.varNames[varName] = varDecBlock
+                    stateMachine.codeBlocks.add(varDecBlock)
+                    if (executionBlock == null ) executionBlock = varDecBlock
+                    input.requestFocus()
+                    invalidate()
+                })
+                .setNegativeButton("Cancel", { d, _ ->
+                    d.cancel()
+                })
+                .create()
+                .show()
     }
 
     fun handlePrintButtonClicked() {
         val printDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
         // Build data set for our dropdown
         val varSpinner = Spinner(this.context)
-        val spinnerArray: List<String> = ArrayList(varNames.keys)
+        val spinnerArray: List<String> = ArrayList(stateMachine.varNames.keys)
         val varAdapter: ArrayAdapter<String> = ArrayAdapter(this.context, android.R.layout.simple_spinner_item, spinnerArray)
         varAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         varSpinner.adapter = varAdapter
         varSpinner.prompt = "What do you want to print?"
 
         printDialog.setView(varSpinner)
-            .setTitle("Print a variable")
-            .setPositiveButton("OK", { _, _ ->
-                val varBlock = varNames[varSpinner.selectedItem.toString()]
-                val printBlock = PrintBlock(varBlock!!, width / 2, height / 2)
-                codeBlocks.add(printBlock)
-                if (executionBlock == null ) executionBlock = printBlock
-                invalidate()
-            })
-            .setNegativeButton("Cancel", { d, _ ->
-                d.cancel()
-            })
-            .show()
+                .setTitle("Print a variable")
+                .setPositiveButton("OK", { _, _ ->
+                    val varBlock = stateMachine.varNames[varSpinner.selectedItem.toString()]
+                    val printBlock = ReturnBlock(varBlock!!, width/2, height/2)
+                    stateMachine.codeBlocks.add(printBlock)
+                    if (executionBlock == null ) executionBlock = printBlock
+                    invalidate()
+                })
+                .setNegativeButton("Cancel", { d, _ ->
+                    d.cancel()
+                })
+                .create()
+                .show()
     }
 
     fun handleIfElseButtonClick() {
@@ -147,7 +167,7 @@ class CanvasView : View {
 
         // Build data set for our dropdown
         val varSpinner = Spinner(this.context)
-        val spinnerArray: List<String> = ArrayList(varNames.keys)
+        val spinnerArray: List<String> = ArrayList(stateMachine.varNames.keys)
         val varAdapter: ArrayAdapter<String> = ArrayAdapter(this.context, android.R.layout.simple_spinner_item, spinnerArray)
         varAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         varSpinner.adapter = varAdapter
@@ -173,20 +193,50 @@ class CanvasView : View {
         ifElseDialog.setView(layoutGroup)
                 .setTitle("Set up a condition")
                 .setPositiveButton("OK", { _, _ ->
-                    val conditionBlock = varNames[varSpinner.selectedItem.toString()]
+                    val conditionBlock = stateMachine.varNames[varSpinner.selectedItem.toString()]
                     val comparator = compareSpinner.selectedItem.toString()
                     val target = input.text.toString()
-                    val ifElseBlock = IfElseBlock(conditionBlock!!, comparator, target, width / 2, height / 2)
-                    codeBlocks.add(ifElseBlock)
+                    val ifElseBlock = IfElseBlock(conditionBlock!!, comparator, target, width/2, height/2)
+                    stateMachine.codeBlocks.add(ifElseBlock)
                     if (executionBlock == null ) executionBlock = ifElseBlock
                     invalidate()
                 })
                 .setNegativeButton("Cancel", { d, _ ->
                     d.cancel()
                 })
+                .create()
                 .show()
     }
 
+    /**
+     * Helper Functions
+     */
+    private fun isDeletingBlock(codeBlock: CodeBlock): Boolean {
+        val trashcan: View = rootView.findViewById(R.id.trashCan)
+        val blockRect: Rect = codeBlock.rect
+        val trashRect = Rect(trashcan.left, trashcan.top, trashcan.right, trashcan.bottom)
+        return Rect.intersects(blockRect, trashRect)
+    }
+
+    private fun toggleTrashCan() {
+        val trashCan: View = rootView.findViewById(R.id.trashCan)
+        val visibility: Int = trashCan.visibility
+        when ( visibility ) {
+            View.VISIBLE -> {
+                // TODO: fade down
+                trashCan.visibility = View.INVISIBLE
+            }
+
+            View.INVISIBLE -> {
+                // TODO: fade up
+                trashCan.visibility = View.VISIBLE
+            }
+        }
+    }
+
+    /**
+     * Canvas Interaction
+     */
     override fun onTouchEvent(event: MotionEvent): Boolean {
         val x: Int = event.x.toInt()
         val y: Int = event.y.toInt()
@@ -241,7 +291,7 @@ class CanvasView : View {
             is CodeBlock -> {
                 toggleTrashCan()
                 if (isDeletingBlock(selectedBlock!!)) {
-                    codeBlocks.remove(selectedBlock!!)
+                    stateMachine.codeBlocks.remove(selectedBlock!!)
                 }
                 selectedBlock = null
             }
@@ -257,9 +307,9 @@ class CanvasView : View {
             when( selectedBlock ) {
                 null -> {
                     mPath.quadTo( mX.toFloat(), mY.toFloat(), (x + mX).toFloat() / 2, (y + mY).toFloat() / 2 )
-
+                    // TODO: Extract to function
                     var closestBlock: CodeBlock? = executionBlock
-                    for (block: CodeBlock in codeBlocks) {
+                    for (block: CodeBlock in stateMachine.codeBlocks) {
                         val bX = block.rect.centerX()
                         val bY = block.rect.centerY()
 
@@ -277,9 +327,21 @@ class CanvasView : View {
                         }
                     }
 
+
                     if (closestBlock != executionBlock ) {
                         if (executionBlock != null) {
-                            executionBlock!!.nextBlock = closestBlock
+                            if (executionBlock!!.type == BlockType.IF_ELSE) {
+                                val ifElseBlock = executionBlock as IfElseBlock
+                                if (ifElseBlock.nextBlock != null) {
+                                    ifElseBlock.elseNextBlock = closestBlock
+                                } else {
+                                    ifElseBlock.nextBlock = closestBlock
+                                }
+                            } else {
+                                if (executionBlock!!.type != BlockType.RETURN) {
+                                    executionBlock!!.nextBlock = closestBlock
+                                }
+                            }
                         }
 
                         executionBlock = closestBlock
@@ -295,12 +357,14 @@ class CanvasView : View {
                     val blockHeight = selectedBlock!!.rect.height()
                     // Only move the rect if we're not going off the screen
                     if ( (blockX + dx >= 0 && blockX + blockWidth + dx <= width)
-                            && (blockY + dy >= 0 && blockY + blockHeight + dy <= height)) {
+                            && (blockY + dy >= 0 && blockY + blockHeight + dy <= height) ) {
                         selectedBlock!!.rect.left = blockX + dx
                         selectedBlock!!.rect.top = blockY + dy
                         selectedBlock!!.rect.right = selectedBlock!!.rect.left + BlockSize.BLOCK_WIDTH.number
                         selectedBlock!!.rect.bottom = selectedBlock!!.rect.top + BlockSize.BLOCK_HEIGHT.number
                     }
+
+                    invalidate()
                 }
             }
 
@@ -309,33 +373,9 @@ class CanvasView : View {
         }
     }
 
-    private fun isDeletingBlock(codeBlock: CodeBlock): Boolean {
-        val trashcan: View = rootView.findViewById(R.id.trashCan)
-        val blockRect: Rect = codeBlock.rect
-        val trashRect = Rect(trashcan.left, trashcan.top, trashcan.right, trashcan.bottom)
-        return Rect.intersects(blockRect, trashRect)
-    }
-
-    private fun toggleTrashCan() {
-        val trashCan: View = rootView.findViewById(R.id.trashCan)
-        val visibility: Int = trashCan.visibility
-        when ( visibility ) {
-            View.VISIBLE -> {
-                // TODO: fade down
-                trashCan.visibility = View.INVISIBLE
-            }
-
-            View.INVISIBLE -> {
-                // TODO: fade up
-                trashCan.visibility = View.VISIBLE
-            }
-        }
-    }
-
     private fun getTouchedBlock(x: Int, y: Int): CodeBlock? {
-        for (block: CodeBlock in codeBlocks) {
+        for (block: CodeBlock in stateMachine.codeBlocks) {
             if (block.rect.contains(x, y)) {
-                Log.d("DEBUG", "Registered touch in block: %s".format(block.type))
                 return block
             }
         }
@@ -369,7 +409,9 @@ class CanvasView : View {
             canvas?.drawPath(path.getPath(), path.getPaint())
         }
 
-        for (block: CodeBlock in codeBlocks) {
+        for (block: CodeBlock in stateMachine.codeBlocks) {
+            // Draw any connecting lines
+            canvas?.drawPath(block.connectionPath, mArrowPaint)
             // Draw the block
             canvas?.drawRect(block.rect, mBlockPaint)
             // Draw its text
