@@ -10,6 +10,12 @@ import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.widget.*
+import com.codely.sketch.blocks.*
+import com.codely.sketch.lines.LinePath
+import java.util.*
+import java.util.concurrent.BlockingQueue
+import java.util.concurrent.LinkedBlockingQueue
+import kotlin.concurrent.timerTask
 import kotlin.math.abs
 
 /**
@@ -25,6 +31,7 @@ class CanvasView : View {
     private var mPaint: Paint = Paint()
     private var mBlockPaint: Paint = Paint()
     private var mTextPaint: Paint = Paint()
+    private var mConnectPaint: Paint = Paint()
     private var mX: Int = 0
     private var mY: Int = 0
     private var mTolerance: Int = 5
@@ -33,6 +40,10 @@ class CanvasView : View {
     private var varNames: HashMap<String, VarDecBlock> = HashMap()
     private var selectedBlock: CodeBlock? = null
     private var executionBlock: CodeBlock? = null
+    private var mFadeTimer: Timer = Timer()
+    private val fadeStep = 20
+
+    var drawnLines: BlockingQueue<LinePath> = LinkedBlockingQueue()
 
     // Constructors
     constructor(context: Context) : this(context, null)
@@ -40,6 +51,7 @@ class CanvasView : View {
     constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {
         val width: Int = Resources.getSystem().displayMetrics.widthPixels
         val height: Int = Resources.getSystem().displayMetrics.heightPixels - 200
+
 
         mPaint.color = Color.BLACK
         mPaint.strokeJoin = Paint.Join.ROUND
@@ -54,7 +66,30 @@ class CanvasView : View {
         mTextPaint.style = Paint.Style.FILL
         mTextPaint.textSize = 40f
 
+        mConnectPaint.color = Color.BLUE
+        mConnectPaint.strokeJoin = Paint.Join.ROUND
+        mConnectPaint.style = Paint.Style.STROKE
+        mConnectPaint.strokeWidth = 25f
+
         mBitMap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        scheduleFadeTimer()
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        mBitMap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        mCanvas = Canvas(mBitMap)
+
+    }
+
+    private fun defaultPaint(): Paint {
+        var paint = Paint()
+        paint.color = Color.BLACK
+        paint.strokeJoin = Paint.Join.ROUND
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 10f
+
+        return paint
     }
 
     fun handleVarDecButtonClick() {
@@ -66,7 +101,7 @@ class CanvasView : View {
             .setTitle("Declare a variable")
             .setPositiveButton("OK", { _, _ ->
                 val varName = input.text.toString()
-                val varDecBlock = VarDecBlock(varName, width/2, height/2)
+                val varDecBlock = VarDecBlock(varName, width / 2, height / 2)
                 // TODO: Add error checking
                 varNames[varName] = varDecBlock
                 codeBlocks.add(varDecBlock)
@@ -94,7 +129,7 @@ class CanvasView : View {
             .setTitle("Print a variable")
             .setPositiveButton("OK", { _, _ ->
                 val varBlock = varNames[varSpinner.selectedItem.toString()]
-                val printBlock = PrintBlock(varBlock!!, width/2, height/2)
+                val printBlock = PrintBlock(varBlock!!, width / 2, height / 2)
                 codeBlocks.add(printBlock)
                 if (executionBlock == null ) executionBlock = printBlock
                 invalidate()
@@ -141,7 +176,7 @@ class CanvasView : View {
                     val conditionBlock = varNames[varSpinner.selectedItem.toString()]
                     val comparator = compareSpinner.selectedItem.toString()
                     val target = input.text.toString()
-                    val ifElseBlock = IfElseBlock(conditionBlock!!, comparator, target, width/2, height/2)
+                    val ifElseBlock = IfElseBlock(conditionBlock!!, comparator, target, width / 2, height / 2)
                     codeBlocks.add(ifElseBlock)
                     if (executionBlock == null ) executionBlock = ifElseBlock
                     invalidate()
@@ -150,12 +185,6 @@ class CanvasView : View {
                     d.cancel()
                 })
                 .show()
-    }
-
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
-        mBitMap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        mCanvas = Canvas(mBitMap)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -179,7 +208,17 @@ class CanvasView : View {
 
         // if we didn't touch a block, just move the path
         when(touchedBlock) {
-            null -> mPath.moveTo(x.toFloat(), y.toFloat())
+            null -> {
+                val linePath = LinePath()
+                mPath = Path()
+                linePath.setPath(mPath)
+                linePath.setPaint(defaultPaint())
+
+                mPath.reset()
+                mPath.moveTo(x.toFloat(), y.toFloat())
+
+                drawnLines.add(linePath)
+            }
             else -> {
                 selectedBlock = touchedBlock
                 toggleTrashCan()
@@ -193,14 +232,80 @@ class CanvasView : View {
     // draws the path
     private fun endTouch() {
         when (selectedBlock) {
-            null            -> mPath.lineTo( mX.toFloat(), mY.toFloat() )
-            is CodeBlock    -> {
+            null         -> {
+                mPath.lineTo( mX.toFloat(), mY.toFloat() )
+                for (p: LinePath in drawnLines) {
+                    p.setCanAnimate(true)
+                }
+            }
+            is CodeBlock -> {
                 toggleTrashCan()
                 if (isDeletingBlock(selectedBlock!!)) {
                     codeBlocks.remove(selectedBlock!!)
                 }
                 selectedBlock = null
             }
+        }
+    }
+
+    private fun moveTouch(x: Int, y: Int) {
+        val distX: Int = abs( x - mX )
+        val distY: Int = abs( y - mY )
+        // If intent is to actually move
+        if ( distX >= mTolerance || distY >= mTolerance) {
+            // we're dragging a block
+            when( selectedBlock ) {
+                null -> {
+                    mPath.quadTo( mX.toFloat(), mY.toFloat(), (x + mX).toFloat() / 2, (y + mY).toFloat() / 2 )
+
+                    var closestBlock: CodeBlock? = executionBlock
+                    for (block: CodeBlock in codeBlocks) {
+                        val bX = block.rect.centerX()
+                        val bY = block.rect.centerY()
+
+                        if ( closestBlock != null ) {
+                            // only care if we're close enough to be considered a selection
+                            if (abs(x - bX) >= mBlockSelectionTolerance
+                                    && abs( y - bY) >= mBlockSelectionTolerance) {
+                                continue
+                            }
+
+                            if ( abs(x - bX) < abs(closestBlock.rect.centerX() - bX)
+                                    && abs(y - bY) < abs(closestBlock.rect.centerX() - bY)) {
+                                closestBlock = block
+                            }
+                        }
+                    }
+
+                    if (closestBlock != executionBlock ) {
+                        if (executionBlock != null) {
+                            executionBlock!!.nextBlock = closestBlock
+                        }
+
+                        executionBlock = closestBlock
+                    }
+                }
+
+                is CodeBlock -> {
+                    val dx = x - mX
+                    val dy = y - mY
+                    val blockX = selectedBlock!!.rect.left
+                    val blockY = selectedBlock!!.rect.top
+                    val blockWidth = selectedBlock!!.rect.width()
+                    val blockHeight = selectedBlock!!.rect.height()
+                    // Only move the rect if we're not going off the screen
+                    if ( (blockX + dx >= 0 && blockX + blockWidth + dx <= width)
+                            && (blockY + dy >= 0 && blockY + blockHeight + dy <= height)) {
+                        selectedBlock!!.rect.left = blockX + dx
+                        selectedBlock!!.rect.top = blockY + dy
+                        selectedBlock!!.rect.right = selectedBlock!!.rect.left + BlockSize.BLOCK_WIDTH.number
+                        selectedBlock!!.rect.bottom = selectedBlock!!.rect.top + BlockSize.BLOCK_HEIGHT.number
+                    }
+                }
+            }
+
+            mX = x
+            mY = y
         }
     }
 
@@ -227,69 +332,6 @@ class CanvasView : View {
         }
     }
 
-    private fun moveTouch(x: Int, y: Int) {
-        val distX: Int = abs( x - mX )
-        val distY: Int = abs( y - mY )
-        // If intent is to actually move
-        if ( distX >= mTolerance || distY >= mTolerance) {
-            // we're dragging a block
-            when( selectedBlock ) {
-                null -> {
-                    mPath.quadTo( mX.toFloat(), mY.toFloat(), (x + mX).toFloat() / 2, (y + mY).toFloat() / 2)
-                    // TODO: Find closest block to finger
-                    var closestBlock: CodeBlock? = executionBlock
-                    for (block: CodeBlock in codeBlocks) {
-                        val bX = block.rect.centerX()
-                        val bY = block.rect.centerY()
-
-                        if ( closestBlock != null ) {
-                            // only care if we're close enough to be considered a selection
-                            if (abs(x - bX) >= mBlockSelectionTolerance
-                                    && abs( y - bY) >= mBlockSelectionTolerance) {
-                                continue
-                            }
-
-                            if ( abs(x - bX) < abs(closestBlock.rect.centerX() - bX)
-                                    && abs(y - bY) < abs(closestBlock.rect.centerX() - bY)) {
-                                closestBlock = block
-                            }
-                        }
-                    }
-
-                    if (closestBlock != executionBlock ) {
-                        if (executionBlock != null) {
-                            executionBlock!!.nextBlock = closestBlock
-                        }
-
-                        executionBlock = closestBlock
-
-                        print("Changing closest block")
-                    }
-                }
-
-                is CodeBlock    -> {
-                    val dx = x - mX
-                    val dy = y - mY
-                    val blockX = selectedBlock!!.rect.left
-                    val blockY = selectedBlock!!.rect.top
-                    val blockWidth = selectedBlock!!.rect.width()
-                    val blockHeight = selectedBlock!!.rect.height()
-                    // Only move the rect if we're not going off the screen
-                    if ( (blockX + dx >= 0 && blockX + blockWidth + dx <= width)
-                            && (blockY + dy >= 0 && blockY + blockHeight + dy <= height)) {
-                        selectedBlock!!.rect.left = blockX + dx
-                        selectedBlock!!.rect.top = blockY + dy
-                        selectedBlock!!.rect.right = selectedBlock!!.rect.left + BlockSize.BLOCK_WIDTH.number
-                        selectedBlock!!.rect.bottom = selectedBlock!!.rect.top + BlockSize.BLOCK_HEIGHT.number
-                    }
-                }
-            }
-
-            mX = x
-            mY = y
-        }
-    }
-
     private fun getTouchedBlock(x: Int, y: Int): CodeBlock? {
         for (block: CodeBlock in codeBlocks) {
             if (block.rect.contains(x, y)) {
@@ -302,15 +344,39 @@ class CanvasView : View {
         return null
     }
 
+    private fun scheduleFadeTimer() {
+        mFadeTimer.scheduleAtFixedRate(timerTask {
+            for (path: LinePath in drawnLines) {
+                if (path.canAnimate()) {
+                    var currentAlpha: Int = path.getPaint().alpha
+                    currentAlpha -= fadeStep
+
+                    path.setAlpha(currentAlpha)
+                    path.getPaint().alpha = currentAlpha
+
+                    if (currentAlpha <= 0) {
+                        drawnLines.remove(path)
+                    }
+                }
+            }
+        }, 0, 100)
+    }
+
+    // Main Canvas Loop
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
-        canvas?.drawPath(mPath, mPaint)
+        for (path: LinePath in drawnLines) {
+            canvas?.drawPath(path.getPath(), path.getPaint())
+        }
+
         for (block: CodeBlock in codeBlocks) {
             // Draw the block
             canvas?.drawRect(block.rect, mBlockPaint)
             // Draw its text
             canvas?.drawText(block.getBlockText(), block.rect.left.toFloat(), block.rect.top.toFloat(), mTextPaint)
         }
+
+        invalidate()
     }
 
 }

@@ -1,4 +1,4 @@
-package com.codely.sketch
+package com.codely.sketch.blocks
 
 import android.graphics.Rect
 
