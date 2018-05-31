@@ -43,9 +43,9 @@ class CanvasView : View {
     private var executionBlock: CodeBlock? = null
     private var mFadeTimer: Timer = Timer()
     private val fadeStep = 20
+    private val emptyPath = Path();
 
     var drawnLines: BlockingQueue<LinePath> = LinkedBlockingQueue()
-
     private val stateMachine: CodeStateMachine = CodeStateMachine.getInstance()
 
     // Constructors
@@ -55,7 +55,7 @@ class CanvasView : View {
         val width: Int = Resources.getSystem().displayMetrics.widthPixels
         val height: Int = Resources.getSystem().displayMetrics.heightPixels
 
-        mPaint.color = Color.BLACK
+        mPaint.color = Color.WHITE
         mPaint.strokeJoin = Paint.Join.ROUND
         mPaint.style = Paint.Style.STROKE
         mPaint.strokeWidth = 1f
@@ -409,10 +409,11 @@ class CanvasView : View {
         for (path: LinePath in drawnLines) {
             canvas?.drawPath(path.getPath(), path.getPaint())
         }
-
         for (block: CodeBlock in stateMachine.codeBlocks) {
             // Draw any connecting lines
-            canvas?.drawPath(block.connectionPath, mArrowPaint)
+            if (block.connectionPath != emptyPath) {
+                canvas?.drawPath(block.connectionPath, mArrowPaint)
+            }
             // Draw the block
             canvas?.drawRect(block.rect, mBlockPaint)
             // Draw its text
