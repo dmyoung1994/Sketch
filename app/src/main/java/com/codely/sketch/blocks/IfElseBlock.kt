@@ -15,18 +15,29 @@ class IfElseBlock(conditionBlock: VarDecBlock, compare: String, target: String, 
     private var compare = compare
     private var target = target
 
+    override var parentBlock: CodeBlock? = null
     override var connectionPath: Path = Path()
     override var nextBlock: CodeBlock? = null
         set(value) {
             field = value
-            connectionPath.moveTo(rect.exactCenterX(), rect.exactCenterY())
-            connectionPath.lineTo(value!!.rect.exactCenterX(), value.rect.exactCenterY())
+            when (value) {
+                null -> connectionPath.reset()
+                else -> {
+                    connectionPath.moveTo(rect.exactCenterX(), rect.exactCenterY())
+                    connectionPath.lineTo(value!!.rect.exactCenterX(), value.rect.exactCenterY())
+                }
+            }
         }
     var elseNextBlock: CodeBlock? = null
         set(value) {
             field = value
-            connectionPath.moveTo(rect.exactCenterX(), rect.exactCenterY())
-            connectionPath.lineTo(value!!.rect.exactCenterX(), value.rect.exactCenterY())
+            when (value) {
+                null -> connectionPath.reset()
+                else -> {
+                    connectionPath.moveTo(rect.exactCenterX(), rect.exactCenterY())
+                    connectionPath.lineTo(value!!.rect.exactCenterX(), value.rect.exactCenterY())
+                }
+            }
         }
 
     private fun translateComparitor(compare: String): String {
@@ -77,7 +88,6 @@ class IfElseBlock(conditionBlock: VarDecBlock, compare: String, target: String, 
             "<=" -> runHelper(conditionBlock.value.toString() <= target)
             ">=" -> runHelper(conditionBlock.value.toString() >= target)
         }
-
     }
 
     override fun getBlockText(): String {

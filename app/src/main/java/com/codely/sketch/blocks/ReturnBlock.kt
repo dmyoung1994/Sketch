@@ -8,11 +8,16 @@ class ReturnBlock(private var returnBlock: VarDecBlock, x: Int, y: Int) : CodeBl
     override val type: BlockType = BlockType.RETURN
     override var connectionPath: Path = Path()
     override var rect: Rect = Rect(x, y, x + BlockSize.BLOCK_WIDTH.number, y + BlockSize.BLOCK_HEIGHT.number)
+    override var parentBlock: CodeBlock? = null
     override var nextBlock: CodeBlock? = null
         set(value) {
-            field = value
-            connectionPath.moveTo(rect.exactCenterX(), rect.exactCenterY())
-            connectionPath.lineTo(value!!.rect.exactCenterX(), value.rect.exactCenterY())
+            when (value) {
+                null -> connectionPath.reset()
+                else -> {
+                    connectionPath.moveTo(rect.exactCenterX(), rect.exactCenterY())
+                    connectionPath.lineTo(value!!.rect.exactCenterX(), value.rect.exactCenterY())
+                }
+            }
         }
 
     override fun convertToPython() {

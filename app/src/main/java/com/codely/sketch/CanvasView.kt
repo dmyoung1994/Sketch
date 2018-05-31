@@ -293,7 +293,9 @@ class CanvasView : View {
                 toggleTrashCan()
                 if (isDeletingBlock(selectedBlock!!)) {
                     stateMachine.codeBlocks.remove(selectedBlock!!)
+                    selectedBlock!!.notifyDeleted()
                 }
+
                 selectedBlock = null
             }
         }
@@ -341,6 +343,7 @@ class CanvasView : View {
                             } else {
                                 if (executionBlock!!.type != BlockType.RETURN) {
                                     executionBlock!!.nextBlock = closestBlock
+                                    closestBlock!!.parentBlock = executionBlock
                                 }
                             }
                         }
@@ -363,9 +366,8 @@ class CanvasView : View {
                         selectedBlock!!.rect.top = blockY + dy
                         selectedBlock!!.rect.right = selectedBlock!!.rect.left + BlockSize.BLOCK_WIDTH.number
                         selectedBlock!!.rect.bottom = selectedBlock!!.rect.top + BlockSize.BLOCK_HEIGHT.number
+                        selectedBlock!!.notifyBlockMoved()
                     }
-
-                    invalidate()
                 }
             }
 

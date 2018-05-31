@@ -19,6 +19,7 @@ interface CodeBlock {
     var rect: Rect
     var connectionPath: Path
     var nextBlock: CodeBlock?
+    var parentBlock: CodeBlock?
 
     fun run()
     fun convertToPython()
@@ -26,4 +27,34 @@ interface CodeBlock {
     fun convertToJava()
     fun convertToJavascript(): String
     fun getBlockText(): String
+
+    // Notifiers
+    fun notifyBlockMoved() {
+        if (parentBlock != null) {
+            parentBlock!!.handleChildMoved(rect)
+        }
+
+        handleMoved()
+    }
+
+    fun notifyDeleted() {
+        if (parentBlock != null) {
+            parentBlock!!.nextBlock = null
+        }
+    }
+
+    // Handlers
+    fun handleMoved() {
+        if (nextBlock != null) {
+            connectionPath.reset()
+            connectionPath.moveTo(rect.exactCenterX(), rect.exactCenterY())
+            connectionPath.lineTo(nextBlock!!.rect.exactCenterX(), nextBlock!!.rect.exactCenterY())
+        }
+    }
+
+    fun handleChildMoved(childRect: Rect) {
+        connectionPath.reset()
+        connectionPath.moveTo(rect.exactCenterX(), rect.exactCenterY())
+        connectionPath.lineTo(childRect.exactCenterX(), childRect.exactCenterY())
+    }
 }

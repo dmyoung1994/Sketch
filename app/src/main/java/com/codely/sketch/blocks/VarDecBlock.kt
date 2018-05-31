@@ -12,11 +12,17 @@ class VarDecBlock(name: String, x: Int, y: Int) : CodeBlock {
 
     override val type: BlockType = BlockType.VAR_DEC
     override var connectionPath: Path = Path()
+    override var parentBlock: CodeBlock? = null
     override var nextBlock: CodeBlock? = null
         set(value) {
             field = value
-            connectionPath.moveTo(rect.exactCenterX(), rect.exactCenterY())
-            connectionPath.lineTo(value!!.rect.exactCenterX(), value.rect.exactCenterY())
+            when (value) {
+                null -> connectionPath.reset()
+                else -> {
+                    connectionPath.moveTo(rect.exactCenterX(), rect.exactCenterY())
+                    connectionPath.lineTo(value!!.rect.exactCenterX(), value.rect.exactCenterY())
+                }
+            }
         }
     override var rect: Rect = Rect(x, y, x + BlockSize.BLOCK_WIDTH.number, y + BlockSize.BLOCK_HEIGHT.number)
 
