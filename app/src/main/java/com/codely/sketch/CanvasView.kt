@@ -10,6 +10,7 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import android.widget.*
+import com.codely.sketch.blocks.ReturnBlock
 import com.codely.sketch.blocks.*
 import com.codely.sketch.lines.LinePath
 import java.util.*
@@ -148,9 +149,9 @@ class CanvasView : View {
                 .setTitle("Print a variable")
                 .setPositiveButton("OK", { _, _ ->
                     val varBlock = stateMachine.varNames[varSpinner.selectedItem.toString()]
-                    val printBlock = ReturnBlock(varBlock!!, width/2, height/2)
-                    stateMachine.codeBlocks.add(printBlock)
-                    if (executionBlock == null ) executionBlock = printBlock
+                    val returnBlock = ReturnBlock(varBlock!!, width / 2, height / 2)
+                    stateMachine.codeBlocks.add(returnBlock)
+                    if (executionBlock == null ) executionBlock = returnBlock
                     invalidate()
                 })
                 .setNegativeButton("Cancel", { d, _ ->
