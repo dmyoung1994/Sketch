@@ -31,7 +31,7 @@ interface CodeBlock {
     // Notifiers
     fun notifyBlockMoved() {
         if (parentBlock != null) {
-            parentBlock!!.handleChildMoved(rect)
+            parentBlock!!.handleChildMoved(this)
         }
 
         handleMoved()
@@ -40,6 +40,10 @@ interface CodeBlock {
     fun notifyDeleted() {
         if (parentBlock != null) {
             parentBlock!!.nextBlock = null
+        }
+
+        if (nextBlock != null) {
+            nextBlock!!.parentBlock = null
         }
     }
 
@@ -52,9 +56,9 @@ interface CodeBlock {
         }
     }
 
-    fun handleChildMoved(childRect: Rect) {
+    fun handleChildMoved(child: CodeBlock) {
         connectionPath.reset()
         connectionPath.moveTo(rect.exactCenterX(), rect.exactCenterY())
-        connectionPath.lineTo(childRect.exactCenterX(), childRect.exactCenterY())
+        connectionPath.lineTo(child.rect.exactCenterX(), child.rect.exactCenterY())
     }
 }

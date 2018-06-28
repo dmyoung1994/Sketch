@@ -14,5 +14,7 @@ class CodeStateMachine private constructor() {
         fun getInstance(): CodeStateMachine {
             return stateMachine
         }
+
+
     }
 }

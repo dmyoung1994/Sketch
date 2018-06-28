@@ -31,4 +31,8 @@ class MainActivity : AppCompatActivity() {
     fun handleRunButtonClick(v: View) {
         cv?.handleRunButtonClick()
     }
+
+    fun handleModifyButtonClick(v: View) {
+        cv?.handleModifyButtonClick()
+    }
 }

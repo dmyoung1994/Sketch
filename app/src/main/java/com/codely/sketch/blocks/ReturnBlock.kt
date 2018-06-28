@@ -15,7 +15,7 @@ class ReturnBlock(private var returnBlock: VarDecBlock, x: Int, y: Int) : CodeBl
                 null -> connectionPath.reset()
                 else -> {
                     connectionPath.moveTo(rect.exactCenterX(), rect.exactCenterY())
-                    connectionPath.lineTo(value!!.rect.exactCenterX(), value.rect.exactCenterY())
+                    connectionPath.lineTo(value.rect.exactCenterX(), value.rect.exactCenterY())
                 }
             }
         }

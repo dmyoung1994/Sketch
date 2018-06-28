@@ -38,12 +38,12 @@ class CanvasView : View {
     private var mX: Int = 0
     private var mY: Int = 0
     private var mTolerance: Int = 5
-    private var mBlockSelectionTolerance: Int = 50
+    private var mBlockSelectionTolerance: Int = BlockSize.BLOCK_HEIGHT.number
     private var selectedBlock: CodeBlock? = null
     private var executionBlock: CodeBlock? = null
     private var mFadeTimer: Timer = Timer()
     private val fadeStep = 20
-    private val emptyPath = Path();
+    private val emptyPath = Path()
 
     var drawnLines: BlockingQueue<LinePath> = LinkedBlockingQueue()
     private val stateMachine: CodeStateMachine = CodeStateMachine.getInstance()
@@ -99,15 +99,22 @@ class CanvasView : View {
      */
 
     fun handleRunButtonClick() {
-        thread(true) {
-            Looper.prepare()
-            stateMachine.codeBlocks.elementAt(0).run()
-            val resultDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
-            resultDialog.setMessage(stateMachine.terminatorBlock?.value.toString())
-                    .setTitle("Code Result")
+            if (stateMachine.codeBlocks.size != 0) {
+                thread(true) {
+                    Looper.prepare()
+                    stateMachine.codeBlocks.elementAt(0).run()
+                    val resultDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
+                    resultDialog.setMessage(stateMachine.terminatorBlock?.value.toString())
+                            .setTitle("Code Result")
+                            .show()
+    //            Toast.makeText(context, stateMachine.terminatorBlock?.value.toString(), Toast.LENGTH_LONG).show()
+                    Looper.loop()
+                }
+            } else {
+                val resultDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
+                resultDialog.setMessage("Drag some blocks onto the canvas to run the code!")
+                    .setTitle("No Blocks!")
                     .show()
-//            Toast.makeText(context, stateMachine.terminatorBlock?.value.toString(), Toast.LENGTH_LONG).show()
-            Looper.loop()
         }
     }
 
@@ -126,6 +133,53 @@ class CanvasView : View {
                     stateMachine.codeBlocks.add(varDecBlock)
                     if (executionBlock == null ) executionBlock = varDecBlock
                     input.requestFocus()
+                    invalidate()
+                })
+                .setNegativeButton("Cancel", { d, _ ->
+                    d.cancel()
+                })
+                .create()
+                .show()
+    }
+
+    fun handleModifyButtonClick() {
+        val modifyDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
+        val layoutGroup = LinearLayout(this.context)
+        layoutGroup.orientation = LinearLayout.VERTICAL
+
+        // Build data set for dropdown
+        val varSpinner = Spinner(this.context)
+        val spinnerArray: List<String> = ArrayList(stateMachine.varNames.keys)
+        val varAdapter: ArrayAdapter<String> = ArrayAdapter(this.context, android.R.layout.simple_spinner_item, spinnerArray)
+        varAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        varSpinner.adapter = varAdapter
+        varSpinner.prompt = "What do you want to modify?"
+
+        // Data Field for modifiers
+        val modifySpinner = Spinner(this.context)
+        val modifyAdapter: ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this.context, R.array.modifiers, android.R.layout.simple_spinner_item)
+        modifyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        modifySpinner.adapter = modifyAdapter
+        modifySpinner.prompt = "How should we modify it?"
+
+        // Data field for condition target
+        val input = EditText(this.context)
+        input.inputType = InputType.TYPE_CLASS_NUMBER
+        input.hint = "By what?"
+
+        layoutGroup.addView(varSpinner)
+        layoutGroup.addView(modifySpinner)
+        layoutGroup.addView(input)
+
+        modifyDialog.setView(layoutGroup)
+                .setTitle("Set up a condition")
+                .setPositiveButton("OK", { _, _ ->
+                    val varBlock = stateMachine.varNames[varSpinner.selectedItem.toString()]
+                    val modifier = modifySpinner.selectedItem.toString()
+                    val value = input.text.toString().toInt()
+                    val modifyBlock = ModifyBlock(varBlock!!, modifier, value, width/2, height/2)
+                    stateMachine.codeBlocks.add(modifyBlock)
+                    if (executionBlock == null ) executionBlock = modifyBlock
                     invalidate()
                 })
                 .setNegativeButton("Cancel", { d, _ ->
@@ -189,7 +243,6 @@ class CanvasView : View {
         layoutGroup.addView(varSpinner)
         layoutGroup.addView(compareSpinner)
         layoutGroup.addView(input)
-
 
         ifElseDialog.setView(layoutGroup)
                 .setTitle("Set up a condition")
@@ -316,10 +369,14 @@ class CanvasView : View {
                         val bX = block.rect.centerX()
                         val bY = block.rect.centerY()
 
+                        if ( closestBlock == block ) {
+                            continue
+                        }
+
                         if ( closestBlock != null ) {
                             // only care if we're close enough to be considered a selection
                             if (abs(x - bX) >= mBlockSelectionTolerance
-                                    && abs( y - bY) >= mBlockSelectionTolerance) {
+                                    || abs( y - bY) >= mBlockSelectionTolerance) {
                                 continue
                             }
 
@@ -333,21 +390,24 @@ class CanvasView : View {
 
                     if (closestBlock != executionBlock ) {
                         if (executionBlock != null) {
-                            if (executionBlock!!.type == BlockType.IF_ELSE) {
-                                val ifElseBlock = executionBlock as IfElseBlock
-                                if (ifElseBlock.nextBlock != null) {
-                                    ifElseBlock.elseNextBlock = closestBlock
-                                } else {
-                                    ifElseBlock.nextBlock = closestBlock
+                            when (executionBlock) {
+                                is IfElseBlock -> {
+                                    val ifElseBlock = executionBlock as IfElseBlock
+                                    if (ifElseBlock.nextBlock != null) {
+                                        ifElseBlock.elseNextBlock = closestBlock
+                                    } else {
+                                        ifElseBlock.nextBlock = closestBlock
+                                    }
                                 }
-                            } else {
-                                if (executionBlock!!.type != BlockType.RETURN) {
+                                is ReturnBlock -> {}
+                                else -> {
                                     executionBlock!!.nextBlock = closestBlock
-                                    closestBlock!!.parentBlock = executionBlock
                                 }
                             }
+                            if (closestBlock!!.parentBlock == null) {
+                                closestBlock.parentBlock = executionBlock
+                            }
                         }
-
                         executionBlock = closestBlock
                     }
                 }
@@ -360,8 +420,8 @@ class CanvasView : View {
                     val blockWidth = selectedBlock!!.rect.width()
                     val blockHeight = selectedBlock!!.rect.height()
                     // Only move the rect if we're not going off the screen
-                    if ( (blockX + dx >= 0 && blockX + blockWidth + dx <= width)
-                            && (blockY + dy >= 0 && blockY + blockHeight + dy <= height) ) {
+                    if ( (blockX + dx >= -40 && blockX + blockWidth + dx <= width + 40)
+                            && (blockY + dy >= -40 && blockY + blockHeight + dy <= height + 40) ) {
                         selectedBlock!!.rect.left = blockX + dx
                         selectedBlock!!.rect.top = blockY + dy
                         selectedBlock!!.rect.right = selectedBlock!!.rect.left + BlockSize.BLOCK_WIDTH.number
@@ -412,10 +472,20 @@ class CanvasView : View {
             canvas?.drawPath(path.getPath(), path.getPaint())
         }
         for (block: CodeBlock in stateMachine.codeBlocks) {
-            // Draw any connecting lines
+
+            // Custom connection draw logic
+            when(block) {
+                is IfElseBlock -> {
+                    if (block.elseConnectionPath != emptyPath) {
+                        canvas?.drawPath(block.elseConnectionPath, mArrowPaint)
+                    }
+                }
+            }
+
             if (block.connectionPath != emptyPath) {
                 canvas?.drawPath(block.connectionPath, mArrowPaint)
             }
+
             // Draw the block
             canvas?.drawRect(block.rect, mBlockPaint)
             // Draw its text

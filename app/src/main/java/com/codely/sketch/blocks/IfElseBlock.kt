@@ -7,16 +7,19 @@ import android.graphics.Rect
  * Created by Daniel on 11/7/2017.
  */
 
-class IfElseBlock(conditionBlock: VarDecBlock, compare: String, target: String, x: Int, y: Int) : CodeBlock {
+class IfElseBlock(
+        private var conditionBlock: VarDecBlock,
+        private var comparitor: String,
+        private var target: String,
+        x: Int,
+        y: Int)
+    : CodeBlock {
     override val type: BlockType = BlockType.IF_ELSE
     override var rect: Rect = Rect(x, y, x + BlockSize.BLOCK_WIDTH.number, y + BlockSize.BLOCK_HEIGHT.number)
 
-    private var conditionBlock = conditionBlock
-    private var compare = compare
-    private var target = target
-
     override var parentBlock: CodeBlock? = null
     override var connectionPath: Path = Path()
+    var elseConnectionPath: Path = Path()
     override var nextBlock: CodeBlock? = null
         set(value) {
             field = value
@@ -24,7 +27,7 @@ class IfElseBlock(conditionBlock: VarDecBlock, compare: String, target: String, 
                 null -> connectionPath.reset()
                 else -> {
                     connectionPath.moveTo(rect.exactCenterX(), rect.exactCenterY())
-                    connectionPath.lineTo(value!!.rect.exactCenterX(), value.rect.exactCenterY())
+                    connectionPath.lineTo(value.rect.exactCenterX(), value.rect.exactCenterY())
                 }
             }
         }
@@ -32,13 +35,39 @@ class IfElseBlock(conditionBlock: VarDecBlock, compare: String, target: String, 
         set(value) {
             field = value
             when (value) {
-                null -> connectionPath.reset()
+                null -> elseConnectionPath.reset()
                 else -> {
-                    connectionPath.moveTo(rect.exactCenterX(), rect.exactCenterY())
-                    connectionPath.lineTo(value!!.rect.exactCenterX(), value.rect.exactCenterY())
+                    elseConnectionPath.moveTo(rect.exactCenterX(), rect.exactCenterY())
+                    elseConnectionPath.lineTo(value.rect.exactCenterX(), value.rect.exactCenterY())
                 }
             }
         }
+
+    override fun handleMoved() {
+        super.handleMoved()
+        if (elseNextBlock != null) {
+            elseConnectionPath.reset()
+            elseConnectionPath.moveTo(rect.exactCenterX(), rect.exactCenterY())
+            elseConnectionPath.lineTo(elseNextBlock!!.rect.exactCenterX(), elseNextBlock!!.rect.exactCenterY())
+        }
+    }
+
+    override fun handleChildMoved(child: CodeBlock) {
+        if (child == nextBlock) {
+            super.handleChildMoved(child)
+        } else {
+            elseConnectionPath.reset()
+            elseConnectionPath.moveTo(rect.exactCenterX(), rect.exactCenterY())
+            elseConnectionPath.lineTo(child.rect.exactCenterX(), child.rect.exactCenterY())
+        }
+    }
+
+    override fun notifyDeleted() {
+        super.notifyDeleted()
+        if (elseNextBlock != null) {
+            elseNextBlock!!.parentBlock = null
+        }
+    }
 
     private fun translateComparitor(compare: String): String {
         return when(compare) {
@@ -66,7 +95,7 @@ class IfElseBlock(conditionBlock: VarDecBlock, compare: String, target: String, 
 
     override fun convertToJavascript(): String {
         return "if (%s %s %s) { %s } else { %s }"
-                .format(conditionBlock.varName, translateComparitor(compare), target,
+                .format(conditionBlock.varName, translateComparitor(comparitor), target,
                         nextBlock?.convertToJavascript(), elseNextBlock?.convertToJavascript())
     }
 
@@ -79,7 +108,7 @@ class IfElseBlock(conditionBlock: VarDecBlock, compare: String, target: String, 
     }
 
     override fun run() {
-        val compareSym = translateComparitor(compare)
+        val compareSym = translateComparitor(comparitor)
         when (compareSym) {
             "==" -> runHelper(conditionBlock.value.toString() == target)
             "!=" -> runHelper(conditionBlock.value.toString() != target)
@@ -91,6 +120,6 @@ class IfElseBlock(conditionBlock: VarDecBlock, compare: String, target: String, 
     }
 
     override fun getBlockText(): String {
-        return "If %s %s %s than...Otherwise...".format(conditionBlock.varName, compare, target)
+        return "If %s %s %s than...Otherwise...".format(conditionBlock.varName, comparitor, target)
     }
 }
