@@ -1,9 +1,13 @@
 <resources>
     <string name="app_name">Sketch</string>
-    <string name="VarDecBlock">Var Dec</string>
-    <string name="IfElse">If / Else</string>
+    <string name="VarDecBlock">Declare</string>
+    <string name="IfElse">Compare</string>
     <string name="Print">Print</string>
     <string name="Delete">Delete</string>
+    <string name="dragtodelete">dragToDelete</string>
+    <string name="run_code">Run Code</string>
+    <string name="testButton">TestButton</string>
+    <string name="modify">Modify</string>
     <string-array name="comparators">
         <item>is equal to</item>
         <item>is not equal to</item>
@@ -11,5 +15,12 @@
         <item>is greater than</item>
         <item>is greater than or equal to</item>
         <item>is less than or equal to</item>
+    </string-array>
+    <string-array name="modifiers">
+        <item>+</item>
+        <item>-</item>
+        <item>*</item>
+        <item>/</item>
+        <item>%</item>
     </string-array>
 </resources>

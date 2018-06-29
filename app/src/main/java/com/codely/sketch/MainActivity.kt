@@ -27,4 +27,12 @@ class MainActivity : AppCompatActivity() {
     fun handlePrintButtonClick(v: View) {
         cv?.handlePrintButtonClicked()
     }
+
+    fun handleRunButtonClick(v: View) {
+        cv?.handleRunButtonClick()
+    }
+
+    fun handleModifyButtonClick(v: View) {
+        cv?.handleModifyButtonClick()
+    }
 }
