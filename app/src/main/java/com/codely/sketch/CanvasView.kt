@@ -38,7 +38,7 @@ class CanvasView : View {
     private var mX: Int = 0
     private var mY: Int = 0
     private var mTolerance: Int = 5
-    private var mBlockSelectionTolerance: Int = BlockSize.BLOCK_HEIGHT.number
+    private var mBlockSelectionTolerance: Int = BlockSize.BLOCK_HEIGHT.number / 2
     private var selectedBlock: CodeBlock? = null
     private var executionBlock: CodeBlock? = null
     private var mFadeTimer: Timer = Timer()
@@ -125,7 +125,7 @@ class CanvasView : View {
         input.hint = "Enter a variable name"
         varDecDialog.setView(input)
                 .setTitle("Declare a variable")
-                .setPositiveButton("OK", { _, _ ->
+                .setPositiveButton("OK") { _, _ ->
                     val varName = input.text.toString()
                     val varDecBlock = VarDecBlock(varName, width / 2, height / 2)
                     // TODO: Add error checking
@@ -134,10 +134,10 @@ class CanvasView : View {
                     if (executionBlock == null ) executionBlock = varDecBlock
                     input.requestFocus()
                     invalidate()
-                })
-                .setNegativeButton("Cancel", { d, _ ->
+                }
+                .setNegativeButton("Cancel") { d, _ ->
                     d.cancel()
-                })
+                }
                 .create()
                 .show()
     }
@@ -173,7 +173,7 @@ class CanvasView : View {
 
         modifyDialog.setView(layoutGroup)
                 .setTitle("Set up a condition")
-                .setPositiveButton("OK", { _, _ ->
+                .setPositiveButton("OK") { _, _ ->
                     val varBlock = stateMachine.varNames[varSpinner.selectedItem.toString()]
                     val modifier = modifySpinner.selectedItem.toString()
                     val value = input.text.toString().toInt()
@@ -181,10 +181,10 @@ class CanvasView : View {
                     stateMachine.codeBlocks.add(modifyBlock)
                     if (executionBlock == null ) executionBlock = modifyBlock
                     invalidate()
-                })
-                .setNegativeButton("Cancel", { d, _ ->
+                }
+                .setNegativeButton("Cancel") { d, _ ->
                     d.cancel()
-                })
+                }
                 .create()
                 .show()
     }
@@ -201,16 +201,16 @@ class CanvasView : View {
 
         printDialog.setView(varSpinner)
                 .setTitle("Print a variable")
-                .setPositiveButton("OK", { _, _ ->
+                .setPositiveButton("OK") { _, _ ->
                     val varBlock = stateMachine.varNames[varSpinner.selectedItem.toString()]
                     val returnBlock = ReturnBlock(varBlock!!, width / 2, height / 2)
                     stateMachine.codeBlocks.add(returnBlock)
                     if (executionBlock == null ) executionBlock = returnBlock
                     invalidate()
-                })
-                .setNegativeButton("Cancel", { d, _ ->
+                }
+                .setNegativeButton("Cancel") { d, _ ->
                     d.cancel()
-                })
+                }
                 .create()
                 .show()
     }
@@ -246,7 +246,7 @@ class CanvasView : View {
 
         ifElseDialog.setView(layoutGroup)
                 .setTitle("Set up a condition")
-                .setPositiveButton("OK", { _, _ ->
+                .setPositiveButton("OK") { _, _ ->
                     val conditionBlock = stateMachine.varNames[varSpinner.selectedItem.toString()]
                     val comparator = compareSpinner.selectedItem.toString()
                     val target = input.text.toString()
@@ -254,10 +254,10 @@ class CanvasView : View {
                     stateMachine.codeBlocks.add(ifElseBlock)
                     if (executionBlock == null ) executionBlock = ifElseBlock
                     invalidate()
-                })
-                .setNegativeButton("Cancel", { d, _ ->
+                }
+                .setNegativeButton("Cancel") { d, _ ->
                     d.cancel()
-                })
+                }
                 .create()
                 .show()
     }
