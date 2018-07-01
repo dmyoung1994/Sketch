@@ -1,5 +1,6 @@
 package com.codely.sketch.blocks
 
+import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
 
@@ -12,6 +13,10 @@ class VarDecBlock(name: String, x: Int, y: Int) : CodeBlock {
 
     override val type: BlockType = BlockType.VAR_DEC
     override var connectionPath: Path = Path()
+    override var blockPaint: Paint = generateBlockPaint()
+    override var pathPaint: Paint = generatePathPaint()
+    override var textPaint: Paint = generateTextPaint()
+
     override var parentBlock: CodeBlock? = null
     override var nextBlock: CodeBlock? = null
         set(value) {
