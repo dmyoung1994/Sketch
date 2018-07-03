@@ -1,23 +1,17 @@
 package com.codely.sketch
 
-import android.app.AlertDialog
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.*
-import android.os.Looper
-import android.text.InputType
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
-import android.widget.*
-import com.codely.sketch.blocks.ReturnBlock
 import com.codely.sketch.blocks.*
 import com.codely.sketch.lines.LinePath
 import java.util.*
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 import kotlin.concurrent.timerTask
-import kotlin.concurrent.thread
 import kotlin.math.abs
 
 /**
@@ -59,187 +53,6 @@ class CanvasView : View {
 
     }
 
-    private fun defaultPaint(): Paint {
-        val paint = Paint()
-        paint.color = Color.BLACK
-        paint.strokeJoin = Paint.Join.ROUND
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = 10f
-
-        return paint
-    }
-
-
-    /**
-     * Interface Handlers
-     */
-
-    fun handleRunButtonClick() {
-            if (stateMachine.codeBlocks.size != 0) {
-                thread(true) {
-                    Looper.prepare()
-                    stateMachine.codeBlocks.elementAt(0).run()
-                    val resultDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
-                    resultDialog.setMessage(stateMachine.terminatorBlock?.value.toString())
-                            .setTitle("Code Result")
-                            .show()
-                    Looper.loop()
-                }
-            } else {
-                val resultDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
-                resultDialog.setMessage("Drag some blocks onto the canvas to run the code!")
-                    .setTitle("No Blocks!")
-                    .show()
-        }
-    }
-
-    fun handleVarDecButtonClick() {
-        val varDecDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
-        val input = EditText(this.context)
-        input.inputType = InputType.TYPE_CLASS_TEXT
-        input.hint = "Enter a variable name"
-        varDecDialog.setView(input)
-                .setTitle("Declare a variable")
-                .setPositiveButton("OK") { _, _ ->
-                    val varName = input.text.toString()
-                    val varDecBlock = VarDecBlock(varName, width / 2, height / 2)
-                    // TODO: Add error checking
-                    stateMachine.varNames[varName] = varDecBlock
-                    stateMachine.codeBlocks.add(varDecBlock)
-                    if (stateMachine.executionBlock == null ) stateMachine.executionBlock = varDecBlock
-                    input.requestFocus()
-                    invalidate()
-                }
-                .setNegativeButton("Cancel") { d, _ ->
-                    d.cancel()
-                }
-                .create()
-                .show()
-    }
-
-    fun handleModifyButtonClick() {
-        val modifyDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
-        val layoutGroup = LinearLayout(this.context)
-        layoutGroup.orientation = LinearLayout.VERTICAL
-
-        // Build data set for dropdown
-        val varSpinner = Spinner(this.context)
-        val spinnerArray: List<String> = ArrayList(stateMachine.varNames.keys)
-        val varAdapter: ArrayAdapter<String> = ArrayAdapter(this.context, android.R.layout.simple_spinner_item, spinnerArray)
-        varAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        varSpinner.adapter = varAdapter
-        varSpinner.prompt = "What do you want to modify?"
-
-        // Data Field for modifiers
-        val modifySpinner = Spinner(this.context)
-        val modifyAdapter: ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this.context, R.array.modifiers, android.R.layout.simple_spinner_item)
-        modifyAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        modifySpinner.adapter = modifyAdapter
-        modifySpinner.prompt = "How should we modify it?"
-
-        // Data field for condition target
-        val input = EditText(this.context)
-        input.inputType = InputType.TYPE_CLASS_NUMBER
-        input.hint = "By what?"
-
-        layoutGroup.addView(varSpinner)
-        layoutGroup.addView(modifySpinner)
-        layoutGroup.addView(input)
-
-        modifyDialog.setView(layoutGroup)
-                .setTitle("Set up a condition")
-                .setPositiveButton("OK") { _, _ ->
-                    // TODO: Error Checking
-                    val varBlock = stateMachine.varNames[varSpinner.selectedItem.toString()]
-                    val modifier = modifySpinner.selectedItem.toString()
-                    val value = input.text.toString().toInt()
-                    val modifyBlock = ModifyBlock(varBlock!!, modifier, value, width/2, height/2)
-                    stateMachine.codeBlocks.add(modifyBlock)
-                    if (stateMachine.executionBlock == null ) stateMachine.executionBlock = modifyBlock
-                    invalidate()
-                }
-                .setNegativeButton("Cancel") { d, _ ->
-                    d.cancel()
-                }
-                .create()
-                .show()
-    }
-
-    fun handlePrintButtonClicked() {
-        val printDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
-        // Build data set for our dropdown
-        val varSpinner = Spinner(this.context)
-        val spinnerArray: List<String> = ArrayList(stateMachine.varNames.keys)
-        val varAdapter: ArrayAdapter<String> = ArrayAdapter(this.context, android.R.layout.simple_spinner_item, spinnerArray)
-        varAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        varSpinner.adapter = varAdapter
-        varSpinner.prompt = "What do you want to print?"
-
-        printDialog.setView(varSpinner)
-                .setTitle("Print a variable")
-                .setPositiveButton("OK") { _, _ ->
-                    // TODO: Add error checking
-                    val varBlock = stateMachine.varNames[varSpinner.selectedItem.toString()]
-                    val returnBlock = ReturnBlock(varBlock!!, width / 2, height / 2)
-                    stateMachine.codeBlocks.add(returnBlock)
-                    if (stateMachine.executionBlock == null ) stateMachine.executionBlock = returnBlock
-                    invalidate()
-                }
-                .setNegativeButton("Cancel") { d, _ ->
-                    d.cancel()
-                }
-                .create()
-                .show()
-    }
-
-    fun handleIfElseButtonClick() {
-        val ifElseDialog: AlertDialog.Builder = AlertDialog.Builder(this.context)
-        val layoutGroup = LinearLayout(this.context)
-        layoutGroup.orientation = LinearLayout.VERTICAL
-
-        // Build data set for our dropdown
-        val varSpinner = Spinner(this.context)
-        val spinnerArray: List<String> = ArrayList(stateMachine.varNames.keys)
-        val varAdapter: ArrayAdapter<String> = ArrayAdapter(this.context, android.R.layout.simple_spinner_item, spinnerArray)
-        varAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        varSpinner.adapter = varAdapter
-        varSpinner.prompt = "What variable should we compare?"
-
-        // Data Field for conditionals
-        val compareSpinner = Spinner(this.context)
-        val compareAdapter: ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(this.context, R.array.comparators, android.R.layout.simple_spinner_item)
-        compareAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        compareSpinner.adapter = compareAdapter
-        compareSpinner.prompt = "How should we compare it?"
-
-        // Data field for condition target
-        val input = EditText(this.context)
-        input.inputType = InputType.TYPE_CLASS_NUMBER
-        input.hint = "What value should we compare it to?"
-
-        layoutGroup.addView(varSpinner)
-        layoutGroup.addView(compareSpinner)
-        layoutGroup.addView(input)
-
-        ifElseDialog.setView(layoutGroup)
-                .setTitle("Set up a condition")
-                .setPositiveButton("OK") { _, _ ->
-                    // TODO: Add error checking and compare to block value
-                    val conditionBlock = stateMachine.varNames[varSpinner.selectedItem.toString()]
-                    val comparator = compareSpinner.selectedItem.toString()
-                    val target = input.text.toString()
-                    val ifElseBlock = IfElseBlock(conditionBlock!!, comparator, target, width/2, height/2)
-                    stateMachine.codeBlocks.add(ifElseBlock)
-                    if (stateMachine.executionBlock == null ) stateMachine.executionBlock = ifElseBlock
-                    invalidate()
-                }
-                .setNegativeButton("Cancel") { d, _ ->
-                    d.cancel()
-                }
-                .create()
-                .show()
-    }
-
     /**
      * Helper Functions
      */
@@ -264,6 +77,16 @@ class CanvasView : View {
                 trashCan.visibility = View.VISIBLE
             }
         }
+    }
+
+    private fun defaultPaint(): Paint {
+        val paint = Paint()
+        paint.color = Color.BLACK
+        paint.strokeJoin = Paint.Join.ROUND
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 10f
+
+        return paint
     }
 
     /**
@@ -314,12 +137,6 @@ class CanvasView : View {
     // draws the path
     private fun endTouch() {
         when (stateMachine.selectedBlock) {
-            null         -> {
-                mPath.lineTo( mX.toFloat(), mY.toFloat() )
-                for (p: LinePath in drawnLines) {
-                    p.setCanAnimate(true)
-                }
-            }
             is CodeBlock -> {
                 toggleTrashCan()
                 if (isDeletingBlock(stateMachine.selectedBlock!!)) {
@@ -332,6 +149,13 @@ class CanvasView : View {
 
                 stateMachine.selectedBlock = null
             }
+
+            null -> {
+                mPath.lineTo( mX.toFloat(), mY.toFloat() )
+                for (p: LinePath in drawnLines) {
+                    p.setCanAnimate(true)
+                }
+            }
         }
     }
 
@@ -342,14 +166,6 @@ class CanvasView : View {
         if ( distX >= mTolerance || distY >= mTolerance) {
             // we're dragging a block
             when(stateMachine.selectedBlock) {
-                null -> {
-                    mPath.quadTo( mX.toFloat(), mY.toFloat(), (x + mX).toFloat() / 2, (y + mY).toFloat() / 2 )
-                    val closestBlock = stateMachine.getClosestBlock(x, y, mBlockSelectionToleranceX, mBlockSelectionToleranceY)
-                    if (closestBlock != null && stateMachine.executionBlock != null) {
-                        stateMachine.connectBlocks(stateMachine.executionBlock!!, closestBlock)
-                    }
-                }
-
                 is CodeBlock -> {
                     val dx = x - mX
                     val dy = y - mY
@@ -361,6 +177,14 @@ class CanvasView : View {
                     if ( (blockX + dx >= -40 && blockX + blockWidth + dx <= width + 40)
                             && (blockY + dy >= -40 && blockY + blockHeight + dy <= height + 40) ) {
                         moveBlock(stateMachine.selectedBlock!!, blockX + dx, blockY + dy)
+                    }
+                }
+
+                null -> {
+                    mPath.quadTo( mX.toFloat(), mY.toFloat(), (x + mX).toFloat() / 2, (y + mY).toFloat() / 2 )
+                    val closestBlock = stateMachine.getClosestBlock(x, y, mBlockSelectionToleranceX, mBlockSelectionToleranceY)
+                    if (closestBlock != null && stateMachine.executionBlock != null) {
+                        stateMachine.connectBlocks(stateMachine.executionBlock!!, closestBlock)
                     }
                 }
             }
