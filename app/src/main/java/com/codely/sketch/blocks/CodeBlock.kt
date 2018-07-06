@@ -1,5 +1,7 @@
 package com.codely.sketch.blocks
 
+import android.graphics.Color
+import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
 
@@ -20,6 +22,9 @@ interface CodeBlock {
     var connectionPath: Path
     var nextBlock: CodeBlock?
     var parentBlock: CodeBlock?
+    var blockPaint: Paint
+    var textPaint: Paint
+    var pathPaint: Paint
 
     fun run()
     fun convertToPython()
@@ -39,12 +44,50 @@ interface CodeBlock {
 
     fun notifyDeleted() {
         if (parentBlock != null) {
-            parentBlock!!.nextBlock = null
+            if (parentBlock!!.type != BlockType.IF_ELSE) {
+                parentBlock!!.nextBlock = null
+            } else {
+                val parentIfElseBlock: IfElseBlock? = parentBlock as? IfElseBlock
+                if (parentIfElseBlock != null) {
+                    if (parentIfElseBlock.nextBlock == this) {
+                        parentIfElseBlock.nextBlock = null
+                    } else if (parentIfElseBlock.elseNextBlock == this) {
+                        parentIfElseBlock.elseNextBlock = null
+                    }
+                }
+            }
         }
 
         if (nextBlock != null) {
             nextBlock!!.parentBlock = null
         }
+    }
+
+    // TODO: Generate based off type of block
+    fun generateBlockPaint() : Paint {
+        val paint = Paint()
+        paint.color = Color.RED
+        paint.strokeWidth = 40f
+        paint.style = Paint.Style.FILL
+        return paint
+    }
+
+    // TODO: Generate based off type of block
+    fun generatePathPaint() : Paint {
+        val paint = Paint()
+        paint.color = Color.BLACK
+        paint.strokeWidth = 40f
+        paint.strokeJoin = Paint.Join.ROUND
+        paint.style = Paint.Style.STROKE
+        return paint
+    }
+
+    fun generateTextPaint() : Paint {
+        val paint = Paint()
+        paint.color = Color.BLACK
+        paint.style = Paint.Style.FILL
+        paint.textSize = 40f
+        return paint
     }
 
     // Handlers

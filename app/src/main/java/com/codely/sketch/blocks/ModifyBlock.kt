@@ -1,12 +1,17 @@
 package com.codely.sketch.blocks
 
+import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
 
 class ModifyBlock(private var toModify: VarDecBlock, private var modifier: String, private var value: Int, x: Int, y: Int) : CodeBlock {
-    override val type: BlockType = BlockType.RETURN
+    override val type: BlockType = BlockType.MODIFIER
     override var connectionPath: Path = Path()
     override var rect: Rect = Rect(x, y, x + BlockSize.BLOCK_WIDTH.number, y + BlockSize.BLOCK_HEIGHT.number)
+    override var blockPaint: Paint = generateBlockPaint()
+    override var pathPaint: Paint = generatePathPaint()
+    override var textPaint: Paint = generateTextPaint()
+
     override var parentBlock: CodeBlock? = null
     override var nextBlock: CodeBlock? = null
         set(value) {

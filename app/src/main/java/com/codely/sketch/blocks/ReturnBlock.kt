@@ -1,5 +1,6 @@
 package com.codely.sketch.blocks
 
+import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
 import com.codely.sketch.CodeStateMachine
@@ -8,6 +9,10 @@ class ReturnBlock(private var returnBlock: VarDecBlock, x: Int, y: Int) : CodeBl
     override val type: BlockType = BlockType.RETURN
     override var connectionPath: Path = Path()
     override var rect: Rect = Rect(x, y, x + BlockSize.BLOCK_WIDTH.number, y + BlockSize.BLOCK_HEIGHT.number)
+    override var blockPaint: Paint = generateBlockPaint()
+    override var pathPaint: Paint = generatePathPaint()
+    override var textPaint: Paint = generateTextPaint()
+
     override var parentBlock: CodeBlock? = null
     override var nextBlock: CodeBlock? = null
         set(value) {
