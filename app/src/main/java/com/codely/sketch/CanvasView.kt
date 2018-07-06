@@ -8,6 +8,7 @@ import android.os.Looper
 import android.text.InputType
 import android.util.AttributeSet
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.View
 import android.widget.*
 import com.codely.sketch.blocks.ReturnBlock
@@ -42,6 +43,8 @@ class CanvasView : View {
     private var selectedBlock: CodeBlock? = null
     private var executionBlock: CodeBlock? = null
     private var mFadeTimer: Timer = Timer()
+    private var mScaleGestureDetector: ScaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
+    private var mScaleFactor: Float = 1f
     private val fadeStep = 20
     private val emptyPath = Path()
 
@@ -295,14 +298,16 @@ class CanvasView : View {
         val x: Int = event.x.toInt()
         val y: Int = event.y.toInt()
 
+
+
+        mScaleGestureDetector.onTouchEvent(event)
+
         when( event.action ) {
             MotionEvent.ACTION_DOWN -> startTouch(x, y)
             MotionEvent.ACTION_MOVE -> moveTouch(x, y)
             MotionEvent.ACTION_UP   -> endTouch()
         }
 
-        // cause a redraw
-        invalidate()
         return true
     }
 
@@ -331,6 +336,18 @@ class CanvasView : View {
 
         mX = x
         mY = y
+    }
+
+    inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+        override fun onScale(detector: ScaleGestureDetector?): Boolean {
+            if (detector != null) {
+                mScaleFactor *= detector.scaleFactor
+                mScaleFactor = Math.max(0.1f, Math.min(mScaleFactor, 10f))
+                invalidate()
+            }
+
+            return true
+        }
     }
 
     // draws the path
@@ -468,31 +485,35 @@ class CanvasView : View {
     // Main Canvas Loop
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
-        for (path: LinePath in drawnLines) {
-            canvas?.drawPath(path.getPath(), path.getPaint())
-        }
-        for (block: CodeBlock in stateMachine.codeBlocks) {
+        if (canvas != null) {
+            canvas.save()
+            canvas.scale(mScaleFactor, mScaleFactor)
+            for (path: LinePath in drawnLines) {
+                canvas.drawPath(path.getPath(), path.getPaint())
+            }
+            for (block: CodeBlock in stateMachine.codeBlocks) {
 
-            // Custom connection draw logic
-            when(block) {
-                is IfElseBlock -> {
-                    if (block.elseConnectionPath != emptyPath) {
-                        canvas?.drawPath(block.elseConnectionPath, mArrowPaint)
+                // Custom connection draw logic
+                when(block) {
+                    is IfElseBlock -> {
+                        if (!block.elseConnectionPath.isEmpty) {
+                            canvas.drawPath(block.elseConnectionPath, block.pathPaint)
+                        }
                     }
                 }
-            }
 
-            if (block.connectionPath != emptyPath) {
-                canvas?.drawPath(block.connectionPath, mArrowPaint)
-            }
+                if (!block.connectionPath.isEmpty) {
+                    canvas.drawPath(block.connectionPath, block.pathPaint)
+                }
 
-            // Draw the block
-            canvas?.drawRect(block.rect, mBlockPaint)
-            // Draw its text
-            canvas?.drawText(block.getBlockText(), block.rect.left.toFloat(), block.rect.top.toFloat(), mTextPaint)
+                // Draw the block
+                canvas.drawRect(block.rect, block.blockPaint)
+                // Draw its text
+                canvas.drawText(block.getBlockText(), block.rect.left.toFloat(), block.rect.top.toFloat(), block.textPaint)
+            }
+            canvas.restore()
         }
 
-        invalidate()
     }
 
 }
