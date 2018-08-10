@@ -3,6 +3,7 @@ package com.codely.sketch
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.*
+import android.support.v4.view.MotionEventCompat
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -34,6 +35,7 @@ class CanvasView : View {
     private var mScaleGestureDetector: ScaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
     private var mScaleFactor: Float = 1f
     private val fadeStep = 20
+    private var mPreviousTouchCount: Int = 0
 
     var drawnLines: BlockingQueue<LinePath> = LinkedBlockingQueue()
     private val stateMachine: CodeStateMachine = CodeStateMachine.getInstance()
@@ -99,16 +101,24 @@ class CanvasView : View {
         val x: Int = event.x.toInt()
         val y: Int = event.y.toInt()
 
+        // transform touch points according to current scale
+        // https://stackoverflow.com/questions/38416250/how-do-i-get-touch-coordinates-with-respect-to-canvas-after-scaling-and-translat
 
+        val touchCount = event.pointerCount
 
-        mScaleGestureDetector.onTouchEvent(event)
-
-        when( event.action ) {
-            MotionEvent.ACTION_DOWN -> startTouch(x, y)
-            MotionEvent.ACTION_MOVE -> moveTouch(x, y)
-            MotionEvent.ACTION_UP   -> endTouch()
+        if (touchCount > 1 /* Multi Touch */) {
+            mScaleGestureDetector.onTouchEvent(event)
+        } else {
+            // Prevent random lines after you multi touch and then lift up a finger
+            if (mPreviousTouchCount == 1) {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> startTouch(x, y)
+                    MotionEvent.ACTION_MOVE -> moveTouch(x, y)
+                    MotionEvent.ACTION_UP -> endTouch()
+                }
+            }
         }
-
+        invalidate()
         return true
     }
 
@@ -245,6 +255,8 @@ class CanvasView : View {
                     }
                 }
             }
+
+            invalidate()
         }, 0, 100)
     }
 
