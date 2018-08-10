@@ -3,7 +3,6 @@ package com.codely.sketch
 import android.content.Context
 import android.content.res.Resources
 import android.graphics.*
-import android.support.v4.view.MotionEventCompat
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
@@ -20,7 +19,10 @@ import kotlin.math.abs
  * Created by Daniel on 10/11/2017.
  */
 
-// TODO: Take out the codeBlocks and put them into a model.
+const val INVALID_POINTER_ID = -1
+const val FADE_STEP = 20
+const val TOLERANCE = 5
+
 // TODO: Make this class the ViewController
 class CanvasView : View {
     private var mBitMap: Bitmap? = null
@@ -28,14 +30,14 @@ class CanvasView : View {
     private var mPath: Path = Path()
     private var mX: Int = 0
     private var mY: Int = 0
-    private var mTolerance: Int = 5
     private var mBlockSelectionToleranceX: Int = BlockSize.BLOCK_HEIGHT.number / 2
     private var mBlockSelectionToleranceY: Int = BlockSize.BLOCK_WIDTH.number / 2
     private var mFadeTimer: Timer = Timer()
     private var mScaleGestureDetector: ScaleGestureDetector = ScaleGestureDetector(context, ScaleListener())
-    private var mScaleFactor: Float = 1f
-    private val fadeStep = 20
-    private var mPreviousTouchCount: Int = 0
+    private var mViewMatrix = Matrix()
+    private var mInvertMatrix = Matrix()
+    private var mActivePointerId = INVALID_POINTER_ID
+    private var mScaleFactor = 1f
 
     var drawnLines: BlockingQueue<LinePath> = LinkedBlockingQueue()
     private val stateMachine: CodeStateMachine = CodeStateMachine.getInstance()
@@ -98,32 +100,26 @@ class CanvasView : View {
      * Canvas Interaction
      */
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        val x: Int = event.x.toInt()
-        val y: Int = event.y.toInt()
+        // transform event points according to our current zoom
+        event.transform(mInvertMatrix)
 
-        // transform touch points according to current scale
-        // https://stackoverflow.com/questions/38416250/how-do-i-get-touch-coordinates-with-respect-to-canvas-after-scaling-and-translat
-
-        val touchCount = event.pointerCount
-
-        if (touchCount > 1 /* Multi Touch */) {
-            mScaleGestureDetector.onTouchEvent(event)
-        } else {
-            // Prevent random lines after you multi touch and then lift up a finger
-            if (mPreviousTouchCount == 1) {
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> startTouch(x, y)
-                    MotionEvent.ACTION_MOVE -> moveTouch(x, y)
-                    MotionEvent.ACTION_UP -> endTouch()
-                }
-            }
+        // preform scale
+        mScaleGestureDetector.onTouchEvent(event)
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> startTouch(event)
+            MotionEvent.ACTION_MOVE -> moveTouch(event)
+            MotionEvent.ACTION_UP -> endTouch()
+            MotionEvent.ACTION_CANCEL -> cancelTouch()
+            MotionEvent.ACTION_POINTER_UP -> pointerReleased(event)
         }
-        invalidate()
         return true
     }
 
     // called when a touch down even it set
-    private fun startTouch(x: Int, y: Int) {
+    private fun startTouch(event: MotionEvent) {
+        val x = event.x.toInt()
+        val y = event.y.toInt()
+
         val touchedBlock: CodeBlock? = getTouchedBlock(x, y)
 
         // if we didn't touch a block, just move the path
@@ -147,18 +143,7 @@ class CanvasView : View {
 
         mX = x
         mY = y
-    }
-
-    inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-        override fun onScale(detector: ScaleGestureDetector?): Boolean {
-            if (detector != null) {
-                mScaleFactor *= detector.scaleFactor
-                mScaleFactor = Math.max(0.1f, Math.min(mScaleFactor, 10f))
-                invalidate()
-            }
-
-            return true
-        }
+        mActivePointerId = event.getPointerId(0)
     }
 
     // draws the path
@@ -178,19 +163,40 @@ class CanvasView : View {
             }
 
             null -> {
-                mPath.lineTo( mX.toFloat(), mY.toFloat() )
                 for (p: LinePath in drawnLines) {
                     p.setCanAnimate(true)
                 }
             }
         }
+        mActivePointerId = INVALID_POINTER_ID
     }
 
-    private fun moveTouch(x: Int, y: Int) {
+    private fun cancelTouch() {
+        mActivePointerId = INVALID_POINTER_ID
+    }
+
+    private fun pointerReleased(event: MotionEvent) {
+        val pointerIndex = ( event.action and MotionEvent.ACTION_POINTER_INDEX_MASK ) shr MotionEvent.ACTION_POINTER_INDEX_SHIFT
+        val pointerId = event.getPointerId(pointerIndex)
+        // This was our active pointer going up. Choose a new
+        // active pointer and adjust accordingly.
+        if (pointerId == mActivePointerId) {
+            val newPointerIndex = if (pointerId == 0) 1 else 0
+            mX = event.getX(newPointerIndex).toInt()
+            mY = event.getY(newPointerIndex).toInt()
+            mActivePointerId = event.getPointerId(newPointerIndex)
+        }
+
+    }
+
+    private fun moveTouch(event: MotionEvent) {
+        val pointerIndex = event.findPointerIndex(mActivePointerId)
+        val x = event.getX(pointerIndex).toInt()
+        val y = event.getY(pointerIndex).toInt()
         val distX: Int = abs( x - mX )
         val distY: Int = abs( y - mY )
         // If intent is to actually move
-        if ( distX >= mTolerance || distY >= mTolerance) {
+        if ( !mScaleGestureDetector.isInProgress && event.pointerCount < 2 && (distX >= TOLERANCE || distY >= TOLERANCE)) {
             // we're dragging a block
             when(stateMachine.selectedBlock) {
                 is CodeBlock -> {
@@ -198,13 +204,7 @@ class CanvasView : View {
                     val dy = y - mY
                     val blockX = stateMachine.selectedBlock!!.rect.left
                     val blockY = stateMachine.selectedBlock!!.rect.top
-                    val blockWidth = stateMachine.selectedBlock!!.rect.width()
-                    val blockHeight = stateMachine.selectedBlock!!.rect.height()
-                    // Only move the rect if we're not going off the screen
-                    if ( (blockX + dx >= -40 && blockX + blockWidth + dx <= width + 40)
-                            && (blockY + dy >= -40 && blockY + blockHeight + dy <= height + 40) ) {
-                        moveBlock(stateMachine.selectedBlock!!, blockX + dx, blockY + dy)
-                    }
+                    moveBlock(stateMachine.selectedBlock!!, blockX + dx, blockY + dy)
                 }
 
                 null -> {
@@ -218,6 +218,28 @@ class CanvasView : View {
 
             mX = x
             mY = y
+            invalidate()
+        }
+    }
+
+    inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+        override fun onScale(detector: ScaleGestureDetector?): Boolean {
+            if (detector != null) {
+                val focusX = detector.focusX
+                val focusY = detector.focusY
+
+                mScaleFactor *= detector.scaleFactor
+                // Only zoom in so much
+                // TODO: Scale around focus
+                mScaleFactor = Math.max(0.1f, Math.min(mScaleFactor, 5f))
+                mViewMatrix.postScale(mScaleFactor, mScaleFactor)
+                mInvertMatrix = Matrix(mViewMatrix)
+                mInvertMatrix.invert(mInvertMatrix)
+                invalidate()
+                return true
+            }
+
+            return true
         }
     }
 
@@ -245,7 +267,7 @@ class CanvasView : View {
             for (path: LinePath in drawnLines) {
                 if (path.canAnimate()) {
                     var currentAlpha: Int = path.getPaint().alpha
-                    currentAlpha -= fadeStep
+                    currentAlpha -= FADE_STEP
 
                     path.setAlpha(currentAlpha)
                     path.getPaint().alpha = currentAlpha
@@ -265,7 +287,7 @@ class CanvasView : View {
         super.onDraw(canvas)
         if (canvas != null) {
             canvas.save()
-            canvas.scale(mScaleFactor, mScaleFactor)
+            canvas.concat(mViewMatrix)
             for (path: LinePath in drawnLines) {
                 canvas.drawPath(path.getPath(), path.getPaint())
             }
