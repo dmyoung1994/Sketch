@@ -65,9 +65,10 @@ class CanvasView : View {
      */
     private fun isDeletingBlock(codeBlock: CodeBlock): Boolean {
         val trashcan: View = rootView.findViewById(R.id.trashCan)
-        val blockRect: Rect = codeBlock.rect
-        val trashRect = Rect(trashcan.left, trashcan.top, trashcan.right, trashcan.bottom)
-        return Rect.intersects(blockRect, trashRect)
+        val blockRect = RectF(codeBlock.rect)
+        mViewMatrix.mapRect(blockRect)
+        val trashRect = RectF(trashcan.left.toFloat(), trashcan.top.toFloat(), trashcan.right.toFloat(), trashcan.bottom.toFloat())
+        return RectF.intersects(blockRect, trashRect)
     }
 
     private fun toggleTrashCan() {
@@ -233,6 +234,7 @@ class CanvasView : View {
                 // TODO: Scale around focus
                 mScaleFactor = Math.max(0.1f, Math.min(mScaleFactor, 5f))
                 mViewMatrix.postScale(mScaleFactor, mScaleFactor)
+                mViewMatrix.postTranslate(focusX - (focusX * mScaleFactor), focusY - (focusY * mScaleFactor))
                 mInvertMatrix = Matrix(mViewMatrix)
                 mInvertMatrix.invert(mInvertMatrix)
                 invalidate()
