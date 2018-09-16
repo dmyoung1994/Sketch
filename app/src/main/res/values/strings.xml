@@ -8,6 +8,9 @@
     <string name="run_code">Run Code</string>
     <string name="testButton">TestButton</string>
     <string name="modify">Modify</string>
+    <string name="lessons">Lessons</string>
+    <string name="header_title">My header title</string>
+    <string name="nav_challenges">Challenges</string>
     <string-array name="comparators">
         <item>is equal to</item>
         <item>is not equal to</item>
