@@ -18,12 +18,12 @@
             android:background="?attr/colorPrimary"
             android:theme="@style/ThemeOverlay.AppCompat.ActionBar" />
 
-        <fragment
-            android:id="@+id/canvas_main"
-            class="com.codely.sketch.CanvasFragment"
+        <FrameLayout
+            android:id="@+id/content"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-        />
+            android:layout_height="match_parent">
+        </FrameLayout>
+
 
     </LinearLayout>
 
@@ -34,5 +34,6 @@
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:fitsSystemWindows="true"
-        app:menu="@menu/navigation_menu"/>
+        app:menu="@menu/navigation_menu"
+        app:headerLayout="@layout/nav_header"/>
 </android.support.v4.widget.DrawerLayout>

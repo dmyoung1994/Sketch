@@ -1,10 +1,7 @@
 package com.codely.sketch
 
 import android.app.AlertDialog
-import android.app.Fragment
-import android.content.pm.ActivityInfo
-import android.graphics.Canvas
-import android.support.v7.app.AppCompatActivity
+import android.support.v4.app.Fragment
 import android.os.Bundle
 import android.os.Looper
 import android.text.InputType
@@ -20,7 +17,7 @@ import java.util.ArrayList
 import kotlin.concurrent.thread
 
 class CanvasFragment : Fragment(), View.OnClickListener {
-    var stateMachine = CodeStateMachine.getInstance()
+    private var stateMachine = CodeStateMachine.getInstance()
 
     companion object {
         fun newInstance(): CanvasFragment {
@@ -28,8 +25,8 @@ class CanvasFragment : Fragment(), View.OnClickListener {
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater?, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val rootView = inflater?.inflate(R.layout.canvas_main, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        val rootView = inflater.inflate(R.layout.canvas_main, container, false)
 
         // Find buttons in view
         val runButton = rootView?.findViewById<Button>(R.id.runButton)

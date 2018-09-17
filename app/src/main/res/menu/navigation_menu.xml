@@ -11,5 +11,10 @@
             android:icon="@drawable/ic_security_black_24dp"
             android:title="@string/nav_challenges"
         />
+        <item
+            android:id="@+id/nav_free_canvas"
+            android:icon="@drawable/ic_gesture_black_24dp"
+            android:title="@string/free_draw"
+        />
     </group>
 </menu>

@@ -3,6 +3,7 @@ package com.codely.sketch
 import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.support.design.widget.NavigationView
+import android.support.v4.app.Fragment
 import android.support.v4.view.GravityCompat
 import android.support.v4.widget.DrawerLayout
 import android.support.v7.app.ActionBar
@@ -27,14 +28,23 @@ class MainActivity : AppCompatActivity() {
             setHomeAsUpIndicator(R.drawable.ic_menu_black_24dp)
         }
 
+        supportFragmentManager.beginTransaction()
+                .add(R.id.content, HomeFragment.newInstance())
+                .addToBackStack(null)
+                .commit();
+
         mDrawerLayout = findViewById(R.id.main_activity)
         val navigationView: NavigationView = findViewById(R.id.nav_view)
         navigationView.setNavigationItemSelectedListener { menuItem ->
             menuItem.isChecked = true
             mDrawerLayout.closeDrawers()
+            val nextScreen = when(menuItem.itemId) {
+                R.id.nav_lessons -> HomeFragment.newInstance()
+                R.id.nav_free_canvas -> CanvasFragment.newInstance()
+                else -> HomeFragment.newInstance()
+            }
 
-            // TODO: add code here to update visible fragment
-
+            supportFragmentManager.beginTransaction().replace(R.id.content, nextScreen).commit()
             true
         }
     }
