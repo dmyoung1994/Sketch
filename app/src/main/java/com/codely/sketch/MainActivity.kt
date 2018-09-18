@@ -31,7 +31,7 @@ class MainActivity : AppCompatActivity() {
         supportFragmentManager.beginTransaction()
                 .add(R.id.content, HomeFragment.newInstance())
                 .addToBackStack(null)
-                .commit();
+                .commit()
 
         mDrawerLayout = findViewById(R.id.main_activity)
         val navigationView: NavigationView = findViewById(R.id.nav_view)
@@ -40,7 +40,7 @@ class MainActivity : AppCompatActivity() {
             mDrawerLayout.closeDrawers()
             val nextScreen = when(menuItem.itemId) {
                 R.id.nav_lessons -> HomeFragment.newInstance()
-                R.id.nav_free_canvas -> CanvasFragment.newInstance()
+                R.id.nav_free_canvas -> CanvasFragment.newInstance(listOf())
                 else -> HomeFragment.newInstance()
             }
 

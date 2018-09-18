@@ -20,38 +20,67 @@ class CanvasFragment : Fragment(), View.OnClickListener {
     private var stateMachine = CodeStateMachine.getInstance()
 
     companion object {
-        fun newInstance(): CanvasFragment {
-            return CanvasFragment()
+        fun newInstance(buttonTypes: List<CodeButton> = ArrayList()): CanvasFragment {
+            val fragment = CanvasFragment()
+            val bundle = Bundle()
+            val buttonIntArray = ArrayList(buttonTypes.map { it -> it.ordinal })
+            bundle.putIntegerArrayList("buttons", buttonIntArray)
+            fragment.arguments = bundle
+            return fragment
         }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val rootView = inflater.inflate(R.layout.canvas_main, container, false)
 
-        // Find buttons in view
-        val runButton = rootView?.findViewById<Button>(R.id.runButton)
-        val varDecButton = rootView?.findViewById<Button>(R.id.varDec)
-        val ifElseButton = rootView?.findViewById<Button>(R.id.ifElse)
-        val printButton = rootView?.findViewById<Button>(R.id.print)
-        val modifyButton = rootView?.findViewById<Button>(R.id.modifyButton)
+        // Generate buttons from list passed in
+        val buttonsSubset: ArrayList<Int> = arguments!!.getIntegerArrayList("buttons")!!
+        val buttonContainer = rootView?.findViewById<LinearLayout>(R.id.buttonContainer)!!
 
-        runButton?.setOnClickListener(this)
-        varDecButton?.setOnClickListener(this)
-        ifElseButton?.setOnClickListener(this)
-        printButton?.setOnClickListener(this)
-        modifyButton?.setOnClickListener(this)
+        if (buttonsSubset.size == 0) {
+            createAllButtons(buttonContainer)
+        } else {
+            for((index, button) in buttonsSubset.withIndex()) {
+                val codeButtonType = CodeButton.fromInt(button)!!
+                buttonContainer.addView(createButton(index, codeButtonType))
+            }
+        }
 
         return rootView
     }
 
-    override fun onClick(v: View?) {
-        when(v?.id) {
-            R.id.runButton    -> handleRunButtonClick(v)
-            R.id.varDec       -> handleVarDecButtonClick(v)
-            R.id.ifElse       -> handleIfElseButtonClick(v)
-            R.id.print        -> handlePrintButtonClick(v)
-            R.id.modifyButton -> handleModifyButtonClick(v)
+    private fun createAllButtons(container: LinearLayout) {
+        for((index, codeButton) in CodeButton.values().withIndex()) {
+            container.addView(createButton(index, codeButton))
         }
+    }
+
+    private fun createButton(index: Int, type: CodeButton) : Button {
+        val button = Button(context)
+        button.id = index
+        when (type) {
+            CodeButton.VAR_DEC -> {
+                button.setText(R.string.VarDecBlock)
+                button.setOnClickListener { handleVarDecButtonClick(it) }
+            }
+
+            CodeButton.IF_ELSE -> {
+                button.setText(R.string.IfElse)
+                button.setOnClickListener { handleIfElseButtonClick(it) }
+            }
+
+            CodeButton.MODIFY -> {
+                button.setText(R.string.modify)
+                button.setOnClickListener { handleModifyButtonClick(it) }
+            }
+
+            CodeButton.PRINT -> {
+                button.setText(R.string.modify)
+                button.setOnClickListener { handlePrintButtonClick(it) }
+            }
+        }
+
+        return button
     }
 
     private fun handleVarDecButtonClick(v: View) {
@@ -214,5 +243,9 @@ class CanvasFragment : Fragment(), View.OnClickListener {
                 }
                 .create()
                 .show()
+    }
+
+    // Not really sure what to do with this...
+    override fun onClick(v: View?) {
     }
 }

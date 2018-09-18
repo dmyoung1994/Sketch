@@ -51,57 +51,10 @@
         app:layout_constraintStart_toStartOf="parent">
 
         <LinearLayout
+            android:id="@+id/buttonContainer"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/varDec"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/VarDecBlock"
-                tools:ignore="ButtonStyle" />
-
-            <Button
-                android:id="@+id/modifyButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/modify"
-                tools:ignore="ButtonStyle" />
-
-            <Button
-                android:id="@+id/ifElse"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/IfElse"
-                tools:ignore="ButtonStyle" />
-
-            <Button
-                android:id="@+id/print"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/Print"
-                tools:ignore="ButtonStyle" />
-
-            <Button
-                android:id="@+id/button3"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/testButton"
-                tools:ignore="ButtonStyle" />
-
-            <Button
-                android:id="@+id/button2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/testButton"
-                tools:ignore="ButtonStyle" />
         </LinearLayout>
 
     </HorizontalScrollView>
