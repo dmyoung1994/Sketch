@@ -36,6 +36,7 @@ class CanvasFragment : Fragment(), View.OnClickListener {
         // Generate buttons from list passed in
         val buttonsSubset: ArrayList<Int> = arguments!!.getIntegerArrayList("buttons")!!
         val buttonContainer = rootView?.findViewById<LinearLayout>(R.id.buttonContainer)!!
+        val runButton = rootView.findViewById<Button>(R.id.runButton)
 
         if (buttonsSubset.size == 0) {
             createAllButtons(buttonContainer)
@@ -45,6 +46,8 @@ class CanvasFragment : Fragment(), View.OnClickListener {
                 buttonContainer.addView(createButton(index, codeButtonType))
             }
         }
+
+        runButton.setOnClickListener { handleRunButtonClick(it) }
 
         return rootView
     }
