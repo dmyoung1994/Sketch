@@ -31,12 +31,19 @@ class CanvasFragment : Fragment(), View.OnClickListener {
     override fun onCreateView(inflater: LayoutInflater?, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val rootView = inflater?.inflate(R.layout.canvas_main, container, false)
 
+<<<<<<< Updated upstream
         // Find buttons in view
         val runButton = rootView?.findViewById<Button>(R.id.runButton)
         val varDecButton = rootView?.findViewById<Button>(R.id.varDec)
         val ifElseButton = rootView?.findViewById<Button>(R.id.ifElse)
         val printButton = rootView?.findViewById<Button>(R.id.print)
         val modifyButton = rootView?.findViewById<Button>(R.id.modifyButton)
+=======
+        // Generate buttons from list passed in
+        val buttonsSubset: ArrayList<Int> = arguments!!.getIntegerArrayList("buttons")!!
+        val buttonContainer = rootView.findViewById<LinearLayout>(R.id.buttonContainer)
+        val runButton = rootView.findViewById<Button>(R.id.runButton)
+>>>>>>> Stashed changes
 
         runButton?.setOnClickListener(this)
         varDecButton?.setOnClickListener(this)
@@ -44,9 +51,12 @@ class CanvasFragment : Fragment(), View.OnClickListener {
         printButton?.setOnClickListener(this)
         modifyButton?.setOnClickListener(this)
 
+        runButton.setOnClickListener { handleRunButtonClick(it) }
+
         return rootView
     }
 
+<<<<<<< Updated upstream
     override fun onClick(v: View?) {
         when(v?.id) {
             R.id.runButton    -> handleRunButtonClick(v)
@@ -54,6 +64,37 @@ class CanvasFragment : Fragment(), View.OnClickListener {
             R.id.ifElse       -> handleIfElseButtonClick(v)
             R.id.print        -> handlePrintButtonClick(v)
             R.id.modifyButton -> handleModifyButtonClick(v)
+=======
+    private fun createAllButtons(container: LinearLayout) {
+        for((index, codeButton) in CodeButton.values().withIndex()) {
+            container.addView(createButton(index, codeButton))
+        }
+    }
+
+    private fun createButton(index: Int, type: CodeButton) : Button {
+        val button = Button(context)
+        button.id = index
+        when (type) {
+            CodeButton.VAR_DEC -> {
+                button.setText(R.string.VarDecBlock)
+                button.setOnClickListener { handleVarDecButtonClick(it) }
+            }
+
+            CodeButton.IF_ELSE -> {
+                button.setText(R.string.IfElse)
+                button.setOnClickListener { handleIfElseButtonClick(it) }
+            }
+
+            CodeButton.MODIFY -> {
+                button.setText(R.string.Modify)
+                button.setOnClickListener { handleModifyButtonClick(it) }
+            }
+
+            CodeButton.PRINT -> {
+                button.setText(R.string.Print)
+                button.setOnClickListener { handlePrintButtonClick(it) }
+            }
+>>>>>>> Stashed changes
         }
     }
 
