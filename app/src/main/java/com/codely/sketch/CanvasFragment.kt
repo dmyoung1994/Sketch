@@ -9,18 +9,17 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import com.codely.sketch.blocks.IfElseBlock
-import com.codely.sketch.blocks.ModifyBlock
-import com.codely.sketch.blocks.ReturnBlock
-import com.codely.sketch.blocks.VarDecBlock
+import com.codely.sketch.blocks.*
 import java.util.ArrayList
 import kotlin.concurrent.thread
 
 class CanvasFragment : Fragment(), View.OnClickListener {
     private var stateMachine = CodeStateMachine.getInstance()
+    private var typesEnabled = false
+    private var buttonTypes: List<CodeButton> = ArrayList()
 
     companion object {
-        fun newInstance(buttonTypes: List<CodeButton> = ArrayList()): CanvasFragment {
+        fun newInstance(typesEnabled: Boolean, buttonTypes: List<CodeButton> = ArrayList()): CanvasFragment {
             val fragment = CanvasFragment()
             val bundle = Bundle()
             val buttonIntArray = ArrayList(buttonTypes.map { it -> it.ordinal })
@@ -35,7 +34,7 @@ class CanvasFragment : Fragment(), View.OnClickListener {
 
         // Generate buttons from list passed in
         val buttonsSubset: ArrayList<Int> = arguments!!.getIntegerArrayList("buttons")!!
-        val buttonContainer = rootView?.findViewById<LinearLayout>(R.id.buttonContainer)!!
+        val buttonContainer = rootView.findViewById<LinearLayout>(R.id.buttonContainer)
         val runButton = rootView.findViewById<Button>(R.id.runButton)
 
         if (buttonsSubset.size == 0) {
@@ -63,22 +62,22 @@ class CanvasFragment : Fragment(), View.OnClickListener {
         button.id = index
         when (type) {
             CodeButton.VAR_DEC -> {
-                button.setText(R.string.VarDecBlock)
+                button.setText(R.string.var_dec_block)
                 button.setOnClickListener { handleVarDecButtonClick(it) }
             }
 
             CodeButton.IF_ELSE -> {
-                button.setText(R.string.IfElse)
+                button.setText(R.string.if_else)
                 button.setOnClickListener { handleIfElseButtonClick(it) }
             }
 
             CodeButton.MODIFY -> {
-                button.setText(R.string.modify)
+                button.setText(R.string.Modify)
                 button.setOnClickListener { handleModifyButtonClick(it) }
             }
 
             CodeButton.PRINT -> {
-                button.setText(R.string.modify)
+                button.setText(R.string.Print)
                 button.setOnClickListener { handlePrintButtonClick(it) }
             }
         }
@@ -88,25 +87,47 @@ class CanvasFragment : Fragment(), View.OnClickListener {
 
     private fun handleVarDecButtonClick(v: View) {
         val varDecDialog: AlertDialog.Builder = AlertDialog.Builder(v.context)
-        val input = EditText(v.context)
-        input.inputType = InputType.TYPE_CLASS_TEXT
-        input.hint = "Enter a variable name"
-        varDecDialog.setView(input)
-                .setTitle("Declare a variable")
-                .setPositiveButton("OK") { _, _ ->
-                    val varName = input.text.toString()
-                    val varDecBlock = VarDecBlock(varName, v.width / 2, v.height / 2)
-                    // TODO: Add error checking
-                    stateMachine.varNames[varName] = varDecBlock
-                    stateMachine.codeBlocks.add(varDecBlock)
-                    if (stateMachine.executionBlock == null ) stateMachine.executionBlock = varDecBlock
-                    input.requestFocus()
-                }
-                .setNegativeButton("Cancel") { d, _ ->
-                    d.cancel()
-                }
-                .create()
-                .show()
+        val layoutGroup = LinearLayout(v.context)
+        layoutGroup.orientation = LinearLayout.VERTICAL
+
+        // For declaring a variable name
+        val varName = EditText(v.context)
+        varName.inputType = InputType.TYPE_CLASS_TEXT
+        varName.hint = "Enter a variable name"
+
+        // TODO: Make these only appear after previous has been entered
+        // Build data set for our dropdown
+        val typeSpinner = Spinner(v.context)
+        val typeAdapter: ArrayAdapter<CharSequence> = ArrayAdapter.createFromResource(v.context, R.array.comparators, android.R.layout.simple_spinner_item)
+        typeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        typeSpinner.adapter = typeAdapter
+        typeSpinner.prompt = "What type should it be?"
+
+        val initValue = EditText(v.context)
+        initValue.inputType = InputType.TYPE_CLASS_TEXT
+        initValue.hint = "Set an initial value"
+
+        layoutGroup.addView(varName)
+        layoutGroup.addView(typeSpinner)
+        layoutGroup.addView(initValue)
+
+        varDecDialog.setView(layoutGroup)
+            .setTitle("Declare a variable")
+            .setPositiveButton("OK") { _, _ ->
+                val varName = varName.text.toString()
+                val varType = VarType.fromString(typeSpinner.selectedItem.toString())
+                val varDecBlock = VarDecBlock(varName, v.width / 2, v.height / 2, varType)
+                // TODO: Add error checking
+                stateMachine.varNames[varName] = varDecBlock
+                stateMachine.codeBlocks.add(varDecBlock)
+                if (stateMachine.executionBlock == null ) stateMachine.executionBlock = varDecBlock
+                layoutGroup.requestFocus()
+            }
+            .setNegativeButton("Cancel") { d, _ ->
+                d.cancel()
+            }
+            .create()
+            .show()
     }
 
     private fun handleIfElseButtonClick(v: View) {
@@ -139,21 +160,21 @@ class CanvasFragment : Fragment(), View.OnClickListener {
         layoutGroup.addView(input)
 
         ifElseDialog.setView(layoutGroup)
-                .setTitle("Set up a condition")
-                .setPositiveButton("OK") { _, _ ->
-                    // TODO: Add error checking and compare to block value
-                    val conditionBlock = stateMachine.varNames[varSpinner.selectedItem.toString()]
-                    val comparator = compareSpinner.selectedItem.toString()
-                    val target = input.text.toString()
-                    val ifElseBlock = IfElseBlock(conditionBlock!!, comparator, target, v.width/2, v.height/2)
-                    stateMachine.codeBlocks.add(ifElseBlock)
-                    if (stateMachine.executionBlock == null ) stateMachine.executionBlock = ifElseBlock
-                }
-                .setNegativeButton("Cancel") { d, _ ->
-                    d.cancel()
-                }
-                .create()
-                .show()
+            .setTitle("Set up a condition")
+            .setPositiveButton("OK") { _, _ ->
+                // TODO: Add error checking and compare to block value
+                val conditionBlock = stateMachine.varNames[varSpinner.selectedItem.toString()]
+                val comparator = compareSpinner.selectedItem.toString()
+                val target = input.text.toString()
+                val ifElseBlock = IfElseBlock(conditionBlock!!, comparator, target, v.width/2, v.height/2)
+                stateMachine.codeBlocks.add(ifElseBlock)
+                if (stateMachine.executionBlock == null ) stateMachine.executionBlock = ifElseBlock
+            }
+            .setNegativeButton("Cancel") { d, _ ->
+                d.cancel()
+            }
+            .create()
+            .show()
     }
 
     private fun handlePrintButtonClick(v: View) {
@@ -167,19 +188,19 @@ class CanvasFragment : Fragment(), View.OnClickListener {
         varSpinner.prompt = "What do you want to print?"
 
         printDialog.setView(varSpinner)
-                .setTitle("Print a variable")
-                .setPositiveButton("OK") { _, _ ->
-                    // TODO: Add error checking
-                    val varBlock = stateMachine.varNames[varSpinner.selectedItem.toString()]
-                    val returnBlock = ReturnBlock(varBlock!!, v.width / 2, v.height / 2)
-                    stateMachine.codeBlocks.add(returnBlock)
-                    if (stateMachine.executionBlock == null ) stateMachine.executionBlock = returnBlock
-                }
-                .setNegativeButton("Cancel") { d, _ ->
-                    d.cancel()
-                }
-                .create()
-                .show()
+            .setTitle("Print a variable")
+            .setPositiveButton("OK") { _, _ ->
+                // TODO: Add error checking
+                val varBlock = stateMachine.varNames[varSpinner.selectedItem.toString()]
+                val returnBlock = ReturnBlock(varBlock!!, v.width / 2, v.height / 2)
+                stateMachine.codeBlocks.add(returnBlock)
+                if (stateMachine.executionBlock == null ) stateMachine.executionBlock = returnBlock
+            }
+            .setNegativeButton("Cancel") { d, _ ->
+                d.cancel()
+            }
+            .create()
+            .show()
     }
 
     private fun handleRunButtonClick(v: View) {

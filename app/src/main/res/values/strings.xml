@@ -1,10 +1,10 @@
 <resources>
     <string name="app_name">Sketch</string>
-    <string name="VarDecBlock">Declare</string>
-    <string name="IfElse">Compare</string>
-    <string name="Print">Print</string>
-    <string name="Delete">Delete</string>
-    <string name="dragtodelete">dragToDelete</string>
+    <string name="var_dec_block">Declare</string>
+    <string name="if_else">Compare</string>
+    <string name="print">Print</string>
+    <string name="delete">Delete</string>
+    <string name="drag_to_delete">dragToDelete</string>
     <string name="run_code">Run Code</string>
     <string name="testButton">TestButton</string>
     <string name="modify">Modify</string>
@@ -12,6 +12,7 @@
     <string name="header_title">My header title</string>
     <string name="nav_challenges">Challenges</string>
     <string name="free_draw">Free Draw</string>
+    <string name="home">Home</string>
     <string-array name="comparators">
         <item>is equal to</item>
         <item>is not equal to</item>
@@ -26,5 +27,10 @@
         <item>*</item>
         <item>/</item>
         <item>%</item>
+    </string-array>
+    <string-array name="var_types">
+        <item>Number</item>
+        <item>String</item>
+        <item>Array</item>
     </string-array>
 </resources>

@@ -7,9 +7,27 @@ import android.graphics.Rect
 /**
  * Created by Daniel on 10/16/2017.
  */
-class VarDecBlock(name: String, x: Int, y: Int) : CodeBlock {
+
+enum class VarType {
+    NUMBER, STRING, ARRAY;
+
+    companion object {
+        fun fromString(type: String): VarType {
+            val normalized = type.toLowerCase()
+            when (normalized) {
+                "number" -> return NUMBER
+                "string" -> return STRING
+                "array" -> return ARRAY
+                else -> throw Throwable("TYPE NOT SUPPORTED")
+            }
+        }
+    }
+}
+
+class VarDecBlock(name: String, initValue: Any, x: Int, y: Int, varType: VarType) : CodeBlock {
     var varName: String = name
-    var value: Int = 0
+    var varType: VarType = varType
+    var value: Any = initValue
 
     override val type: BlockType = BlockType.VAR_DEC
     override var connectionPath: Path = Path()
