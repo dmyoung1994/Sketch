@@ -3,8 +3,9 @@ package com.codely.sketch.blocks
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
+import java.lang.Exception
 
-class ModifyBlock(private var toModify: VarDecBlock, private var modifier: String, private var value: Int, x: Int, y: Int) : CodeBlock {
+class ModifyBlock(private var toModify: VarDecBlock, private var modifier: String, private var value: Any, x: Int, y: Int) : CodeBlock {
     override val type: BlockType = BlockType.MODIFIER
     override var connectionPath: Path = Path()
     override var rect: Rect = Rect(x, y, x + BlockSize.BLOCK_WIDTH.number, y + BlockSize.BLOCK_HEIGHT.number)
@@ -42,12 +43,65 @@ class ModifyBlock(private var toModify: VarDecBlock, private var modifier: Strin
     }
 
     private fun modifyBlockValue() {
+        val modValue = toModify.value
         return when(modifier) {
-            "+"    -> toModify.value += value
-            "-"    -> toModify.value -= value
-            "*"    -> toModify.value *= value
-            "/"    -> toModify.value /= value
-            "%"    -> toModify.value %= value
+            "+"    -> {
+                when(toModify.varType) {
+                    VarType.ARRAY -> toModify.value = mutableListOf(modValue, value)
+                    VarType.STRING -> toModify.value = modValue.toString() + value.toString()
+                    VarType.NUMBER -> {
+                        val intCastModValue = modValue as Float
+                        val intCastValue = value as Float
+                        toModify.value = intCastModValue + intCastValue
+                    }
+                }
+            }
+            "-"    -> {
+                when(toModify.varType) {
+                    VarType.ARRAY -> {
+                        val listCast = modValue as MutableList<*>
+                        repeat(value as Int) {
+                            listCast.removeAt(listCast.size)
+                        }
+                    }
+                    VarType.STRING -> throw Exception("Unsupported operation: %s %s".format(toModify.varType, modifier))
+                    VarType.NUMBER -> {
+                        val intCastModValue = modValue as Float
+                        val intCastValue = value as Float
+                        toModify.value = intCastModValue - intCastValue
+                    }
+                }
+            }
+            "*"    ->
+                when(toModify.varType) {
+                    VarType.ARRAY ->  throw Exception("Unsupported operation: %s %s".format(toModify.varType, modifier))
+                    VarType.STRING -> throw Exception("Unsupported operation: %s %s".format(toModify.varType, modifier))
+                    VarType.NUMBER -> {
+                        val intCastModValue = modValue as Float
+                        val intCastValue = value as Float
+                        toModify.value = intCastModValue * intCastValue
+                    }
+                }
+            "/"    ->
+                when(toModify.varType) {
+                    VarType.ARRAY ->  throw Exception("Unsupported operation: %s %s".format(toModify.varType, modifier))
+                    VarType.STRING -> throw Exception("Unsupported operation: %s %s".format(toModify.varType, modifier))
+                    VarType.NUMBER -> {
+                        val intCastModValue = modValue as Float
+                        val intCastValue = value as Float
+                        toModify.value = intCastModValue / intCastValue
+                    }
+                }
+            "%"    ->
+                when(toModify.varType) {
+                    VarType.ARRAY ->  throw Exception("Unsupported operation: %s %s".format(toModify.varType, modifier))
+                    VarType.STRING -> throw Exception("Unsupported operation: %s %s".format(toModify.varType, modifier))
+                    VarType.NUMBER -> {
+                        val intCastModValue = modValue as Float
+                        val intCastValue = value as Float
+                        toModify.value = intCastModValue % intCastValue
+                    }
+                }
             else -> {}
         }
     }

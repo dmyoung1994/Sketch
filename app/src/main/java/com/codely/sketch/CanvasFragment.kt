@@ -72,12 +72,12 @@ class CanvasFragment : Fragment(), View.OnClickListener {
             }
 
             CodeButton.MODIFY -> {
-                button.setText(R.string.Modify)
+                button.setText(R.string.modify)
                 button.setOnClickListener { handleModifyButtonClick(it) }
             }
 
             CodeButton.PRINT -> {
-                button.setText(R.string.Print)
+                button.setText(R.string.print)
                 button.setOnClickListener { handlePrintButtonClick(it) }
             }
         }
@@ -116,7 +116,7 @@ class CanvasFragment : Fragment(), View.OnClickListener {
             .setPositiveButton("OK") { _, _ ->
                 val varName = varName.text.toString()
                 val varType = VarType.fromString(typeSpinner.selectedItem.toString())
-                val varDecBlock = VarDecBlock(varName, v.width / 2, v.height / 2, varType)
+                val varDecBlock = VarDecBlock(varName, initValue, v.width / 2, v.height / 2, varType)
                 // TODO: Add error checking
                 stateMachine.varNames[varName] = varDecBlock
                 stateMachine.codeBlocks.add(varDecBlock)

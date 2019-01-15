@@ -24,10 +24,13 @@ enum class VarType {
     }
 }
 
-class VarDecBlock(name: String, initValue: Any, x: Int, y: Int, varType: VarType) : CodeBlock {
+class VarDecBlock(name: String, initValue: Any, x: Int, y: Int, var varType: VarType) : CodeBlock {
     var varName: String = name
-    var varType: VarType = varType
-    var value: Any = initValue
+    var value = when(varType) {
+        VarType.ARRAY -> mutableListOf(initValue)
+        VarType.NUMBER -> initValue as Float
+        VarType.STRING -> initValue.toString()
+    }
 
     override val type: BlockType = BlockType.VAR_DEC
     override var connectionPath: Path = Path()
@@ -75,6 +78,6 @@ class VarDecBlock(name: String, initValue: Any, x: Int, y: Int, varType: VarType
     }
 
     override fun getBlockText(): String {
-        return "var %s = 0".format(varName)
+        return "var %s = 0 (%s)".format(varName, varType.name)
     }
 }
